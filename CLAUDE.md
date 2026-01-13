@@ -73,13 +73,13 @@ See PLAN.md "Appendix D" for detailed reasoning. Quick reference:
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Run all tests
-pytest tests/
+pytest manifold_benchmark/tests/
 
 # Run specific test file
-pytest tests/test_surface.py
+pytest manifold_benchmark/tests/test_surface.py
 
 # Run tests with verbose output
-pytest tests/ -v
+pytest manifold_benchmark/tests/ -v
 
 # Run single episode (after Phase 3 implementation)
 python -m manifold_benchmark.experiments.runner --surface two_peaks_clear
@@ -112,7 +112,7 @@ pytest --version  # Should show pytest 9.0.2
 2. Read the API specification in PLAN.md Section 10 for the component
 3. Read the test cases in PLAN.md Section 12 for expected behavior
 4. Implement the component
-5. Run tests: `pytest tests/test_<module>.py -v`
+5. Run tests: `pytest manifold_benchmark/tests/test_<module>.py -v`
 6. Mark checkpoint complete in PLAN.md Appendix C
 7. Commit with checkpoint reference: `git commit -m "Complete checkpoint 1.1: Surface class"`
 8. Update "Current Status" in this file when completing major phases
