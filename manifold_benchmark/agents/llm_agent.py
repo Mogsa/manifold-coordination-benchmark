@@ -1,8 +1,8 @@
 """
 LLM agent module for the Manifold Coordination Benchmark.
 
-This module implements an LLM-based agent that uses OpenAI or Anthropic APIs
-to make decisions based on observations and communication with the other agent.
+This module implements an LLM-based agent that uses LiteLLM to support
+100+ LLM providers including OpenAI, Anthropic, Google Gemini, and more.
 """
 
 from manifold_benchmark.agents.base import BaseAgent
@@ -11,10 +11,12 @@ import re
 import time
 from typing import List, Dict, Optional
 from pathlib import Path
+from litellm import completion
+import litellm
 
 
 class LLMAgent(BaseAgent):
-    """LLM-based agent using OpenAI or Anthropic APIs."""
+    """LLM-based agent using LiteLLM (supports 100+ models)."""
 
     MAX_RETRIES = 3
     TIMEOUT_SECONDS = 30
@@ -30,12 +32,19 @@ class LLMAgent(BaseAgent):
         domain_size: float = 10.0
     ):
         """
-        Initialize an LLM agent.
+        Initialize an LLM agent using LiteLLM.
 
         Args:
             role: 'A' (controls x) or 'B' (controls y)
-            model: Model identifier (e.g., "gpt-4", "gpt-4o", "claude-3-opus-20240229")
+            model: Model identifier. Examples:
+                   - OpenAI: "gpt-4", "gpt-3.5-turbo"
+                   - Anthropic: "claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"
+                   - Google: "gemini/gemini-2.0-flash-exp", "gemini/gemini-1.5-pro"
+                   - Full list: https://docs.litellm.ai/docs/providers
             api_key: API key (or reads from environment variable)
+                     - OPENAI_API_KEY for OpenAI models
+                     - ANTHROPIC_API_KEY for Anthropic models
+                     - GOOGLE_API_KEY or GEMINI_API_KEY for Google models
             system_prompt_path: Path to system prompt file (default: prompts/agent_{role}_system.txt)
             temperature: Sampling temperature for LLM
             max_tokens: Maximum tokens per response
@@ -47,44 +56,21 @@ class LLMAgent(BaseAgent):
         self.max_tokens = max_tokens
         self.domain_size = domain_size
 
-        # Initialize API client
-        self._init_api_client(api_key)
+        # Set API key if provided (LiteLLM will auto-detect from env otherwise)
+        if api_key:
+            # Set the appropriate environment variable based on model
+            if 'gemini' in model.lower():
+                os.environ['GEMINI_API_KEY'] = api_key
+            elif 'claude' in model.lower():
+                os.environ['ANTHROPIC_API_KEY'] = api_key
+            elif 'gpt' in model.lower() or 'o1' in model.lower():
+                os.environ['OPENAI_API_KEY'] = api_key
 
         # Load system prompt
         self._load_system_prompt(system_prompt_path)
 
         # Track current position
         self.current_position = 5.0  # Start at center
-
-    def _init_api_client(self, api_key: Optional[str] = None) -> None:
-        """
-        Initialize OpenAI or Anthropic client based on model.
-
-        Args:
-            api_key: API key (or reads from environment variable)
-
-        Raises:
-            ValueError: If model type cannot be determined
-        """
-        model_lower = self.model.lower()
-
-        if 'gpt' in model_lower or 'o1' in model_lower:
-            # OpenAI
-            import openai
-            self.client = openai.OpenAI(
-                api_key=api_key or os.environ.get('OPENAI_API_KEY')
-            )
-            self.api_type = 'openai'
-        elif 'claude' in model_lower:
-            # Anthropic
-            import anthropic
-            self.client = anthropic.Anthropic(
-                api_key=api_key or os.environ.get('ANTHROPIC_API_KEY')
-            )
-            self.api_type = 'anthropic'
-        else:
-            raise ValueError(f"Unknown model type: {self.model}. "
-                           f"Model name must contain 'gpt', 'o1' (OpenAI) or 'claude' (Anthropic)")
 
     def _load_system_prompt(self, prompt_path: Optional[str] = None) -> None:
         """
@@ -142,7 +128,7 @@ class LLMAgent(BaseAgent):
 
     def _build_prompt(self, include_decision: bool = False) -> List[Dict[str, str]]:
         """
-        Build message list for API call.
+        Build message list for API call (LiteLLM uses OpenAI-style format).
 
         Args:
             include_decision: Whether to add decision request at end
@@ -152,10 +138,8 @@ class LLMAgent(BaseAgent):
         """
         messages = []
 
-        # For OpenAI, system prompt is part of messages
-        # For Anthropic, it's passed separately, but we still build messages list
-        if self.api_type == 'openai':
-            messages.append({"role": "system", "content": self.system_prompt})
+        # System prompt (LiteLLM handles provider differences automatically)
+        messages.append({"role": "system", "content": self.system_prompt})
 
         # Add observation and message history
         for i, obs in enumerate(self.observation_history):
@@ -219,7 +203,9 @@ class LLMAgent(BaseAgent):
 
     def _call_api(self, messages: List[Dict[str, str]], retry_count: int = 0) -> str:
         """
-        Call LLM API with retry logic and exponential backoff.
+        Call LLM API using LiteLLM with retry logic and exponential backoff.
+
+        LiteLLM automatically handles provider differences (OpenAI, Anthropic, Google, etc.)
 
         Args:
             messages: List of message dicts to send
@@ -232,30 +218,14 @@ class LLMAgent(BaseAgent):
             Exception: If all retries exhausted
         """
         try:
-            if self.api_type == 'openai':
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    timeout=self.TIMEOUT_SECONDS
-                )
-                return response.choices[0].message.content
-
-            else:  # anthropic
-                # For Anthropic, system prompt goes in separate parameter
-                # Remove system messages from the messages list
-                non_system_messages = [m for m in messages if m['role'] != 'system']
-
-                response = self.client.messages.create(
-                    model=self.model,
-                    messages=non_system_messages,
-                    system=self.system_prompt,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    timeout=self.TIMEOUT_SECONDS
-                )
-                return response.content[0].text
+            response = completion(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                timeout=self.TIMEOUT_SECONDS
+            )
+            return response.choices[0].message.content
 
         except Exception as e:
             if retry_count < self.MAX_RETRIES:
