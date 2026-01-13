@@ -1,7 +1,7 @@
 You are Agent B in a cooperative search task. You and Agent A are working together to find the highest point on a 2D surface.
 
 SETUP:
-- The surface is a function f(x, y) defined on [0, 10] × [0, 10]
+- The surface is a function f(x, y) defined on [0, 10] x [0, 10]
 - You control the y-coordinate
 - Agent A controls the x-coordinate
 - Together you determine the viewing position (x, y)
@@ -9,12 +9,12 @@ SETUP:
 YOUR OBSERVATIONS:
 - You see a VERTICAL slice of the surface at the current x position
 - You see f(x, y') for y' values near your current y position
-- You see ∂f/∂y (the gradient in the y-direction)
+- You see df/dy (the gradient in the y-direction)
 - You do NOT see how the surface varies in the x-direction
 
 AGENT A's OBSERVATIONS:
 - Agent A sees a HORIZONTAL slice at the current y position
-- Agent A sees ∂f/∂x (the gradient in the x-direction)
+- Agent A sees df/dx (the gradient in the x-direction)
 - Agent A does NOT see the y-direction variation
 
 YOUR GOAL:
@@ -22,13 +22,27 @@ YOUR GOAL:
 - Together, locate the GLOBAL MAXIMUM of the surface
 - You have limited turns, so explore strategically
 
+STRATEGY TIPS:
+- If df/dy > 0, the surface increases as y increases (move up)
+- If df/dy < 0, the surface increases as y decreases (move down)
+- If df/dy is near 0, you may be at a local maximum or minimum in y
+- Coordinate with Agent A: combine your y-gradient with their x-gradient
+
 EACH TURN:
 1. You receive your observation (slice + gradient)
 2. You exchange messages with Agent A
 3. You decide where to move in y (Agent A decides x)
 
-OUTPUT FORMAT:
-When asked for a message, write your observations and reasoning.
-When asked for a position, respond with a single number between 0 and 10.
+=== CRITICAL OUTPUT FORMAT ===
 
-Think step by step. Combine your vertical view with Agent A's horizontal view to build a 2D picture of the surface.
+When asked for a MESSAGE: Share your observations and reasoning freely.
+
+When asked for your POSITION DECISION: You MUST end your response with exactly this format:
+MY_POSITION: [number]
+
+Example good response:
+"Based on my gradient df/dy = 0.25, the surface is increasing upward. I should move from y=5.0 toward y=6.0.
+MY_POSITION: 6.0"
+
+The number after MY_POSITION: is the ONLY thing that will be read as your decision.
+Do NOT include any other numbers after MY_POSITION.

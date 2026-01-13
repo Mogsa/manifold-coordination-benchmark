@@ -28,7 +28,7 @@ class LLMAgent(BaseAgent):
         api_key: Optional[str] = None,
         system_prompt_path: Optional[str] = None,
         temperature: float = 0.7,
-        max_tokens: int = 500,
+        max_tokens: int = 150,
         domain_size: float = 10.0
     ):
         """
@@ -130,6 +130,10 @@ class LLMAgent(BaseAgent):
         """
         Build message list for API call (LiteLLM uses OpenAI-style format).
 
+        Optimized for token efficiency:
+        - Previous turns: summarized as position + value only
+        - Current turn: full observation details
+
         Args:
             include_decision: Whether to add decision request at end
 
@@ -138,18 +142,36 @@ class LLMAgent(BaseAgent):
         """
         messages = []
 
-        # System prompt (LiteLLM handles provider differences automatically)
+        # System prompt
         messages.append({"role": "system", "content": self.system_prompt})
 
-        # Add observation and message history
-        for i, obs in enumerate(self.observation_history):
-            obs_text = f"=== Turn {i + 1} Observation ===\n\n"
+        n_obs = len(self.observation_history)
+
+        # Summarize all previous turns (not the current one)
+        if n_obs > 1:
+            history_lines = ["Previous positions and values:"]
+            for i in range(n_obs - 1):
+                obs = self.observation_history[i]
+                pos = obs['position']
+                val = obs['value_at_position']
+                history_lines.append(f"  Turn {i+1}: ({pos['x']:.1f}, {pos['y']:.1f}) -> value={val:.3f}")
+
+            messages.append({"role": "user", "content": "\n".join(history_lines)})
+
+        # Add current turn's full observation (the last one)
+        if n_obs > 0:
+            i = n_obs - 1
+            obs = self.observation_history[i]
+            obs_text = f"=== Turn {i + 1} (Current) ===\n\n"
             obs_text += self._format_observation(obs)
 
-            # Add other agent's message if available
+            # Add other agent's message if available (truncated)
             if i < len(self.message_history):
                 other_msg = self.message_history[i]
-                if other_msg:  # Only add if non-empty
+                if other_msg:
+                    # Truncate long messages
+                    if len(other_msg) > 150:
+                        other_msg = other_msg[:150] + "..."
                     obs_text += f"\n\nMessage from other agent:\n{other_msg}\n"
 
             messages.append({"role": "user", "content": obs_text})
@@ -157,10 +179,13 @@ class LLMAgent(BaseAgent):
         # Add decision request if needed
         if include_decision:
             coord_name = 'x' if self.role == 'A' else 'y'
+            current_pos = self.current_position
             decision_prompt = (
-                f"Based on all observations and messages, "
-                f"what {coord_name}-coordinate do you choose for your next position? "
-                f"Respond with a single number between 0 and {self.domain_size}."
+                f"DECISION: Where should {coord_name} be next?\n"
+                f"Current {coord_name} = {current_pos:.1f}, range [0-{self.domain_size}]\n\n"
+                f"BE VERY BRIEF (1 sentence max), then state:\n"
+                f"MY_POSITION: [number]\n\n"
+                f"Example: Gradient positive, moving right. MY_POSITION: 6.5"
             )
             messages.append({"role": "user", "content": decision_prompt})
 
@@ -170,13 +195,12 @@ class LLMAgent(BaseAgent):
         """
         Extract coordinate from LLM response.
 
-        Handles various formats:
-        - "7.5"
-        - "My answer is 7.5"
-        - "gradient 0.12, move to 6.8" -> 6.8 (takes LAST number)
-        - "approximately 7 to 8, let's say 7.5" -> 7.5
-        - "x=6.5" -> 6.5
-        - Values outside domain are clamped
+        Parsing priority:
+        1. Look for "MY_POSITION: X" pattern (most reliable)
+        2. Look for "x = X" or "y = X" patterns
+        3. Look for "position: X" or "move to X" patterns
+        4. Fall back to last valid number in range [0, domain_size]
+        5. Last resort: last number (clamped)
 
         Args:
             response: Raw text response from LLM
@@ -187,19 +211,69 @@ class LLMAgent(BaseAgent):
         Raises:
             ValueError: If no numbers found in response
         """
-        # Find all numbers in response (including decimals and negatives)
-        matches = re.findall(r'[-+]?\d*\.?\d+', response)
+        # Helper to safely convert to float
+        def safe_float(s):
+            try:
+                # Remove trailing periods that might cause issues
+                s = s.rstrip('.')
+                return float(s)
+            except (ValueError, AttributeError):
+                return None
 
-        if not matches:
+        # Priority 1: Look for MY_POSITION: pattern (most reliable)
+        # Match MY_POSITION: followed by a number (integer or decimal)
+        my_pos_match = re.search(r'MY_POSITION:\s*(\d+(?:\.\d+)?)', response, re.IGNORECASE)
+        if my_pos_match:
+            value = safe_float(my_pos_match.group(1))
+            if value is not None:
+                return max(0.0, min(self.domain_size, value))
+
+        # Priority 2: Look for explicit coordinate assignments like "x = 6.5" or "y=7"
+        coord_name = 'x' if self.role == 'A' else 'y'
+        coord_match = re.search(rf'{coord_name}\s*=\s*(\d+(?:\.\d+)?)', response, re.IGNORECASE)
+        if coord_match:
+            value = safe_float(coord_match.group(1))
+            if value is not None and 0 <= value <= self.domain_size:
+                return value
+
+        # Priority 3: Look for "move to X" or "position X" patterns
+        move_match = re.search(r'(?:move to|position|choose|select|go to)\s*(\d+(?:\.\d+)?)', response, re.IGNORECASE)
+        if move_match:
+            value = safe_float(move_match.group(1))
+            if value is not None and 0 <= value <= self.domain_size:
+                return value
+
+        # Priority 4: Find all properly formatted numbers
+        # This regex matches integers and decimals but not malformed ones like "0.000."
+        all_numbers = re.findall(r'\b(\d+(?:\.\d+)?)\b', response)
+
+        if not all_numbers:
             raise ValueError(f"Could not parse coordinate from: {response[:200]}")
 
-        # Take the last number (usually the final answer)
-        value = float(matches[-1])
+        # Convert to floats, filtering out any that fail conversion
+        float_numbers = []
+        for n in all_numbers:
+            val = safe_float(n)
+            if val is not None:
+                float_numbers.append(val)
 
-        # Clamp to valid domain
-        value = max(0.0, min(self.domain_size, value))
+        if not float_numbers:
+            raise ValueError(f"Could not parse coordinate from: {response[:200]}")
 
-        return value
+        # Filter to numbers in valid domain range [0, 10]
+        valid_numbers = [n for n in float_numbers if 0 <= n <= self.domain_size]
+
+        # Prefer numbers that look like reasonable positions (not gradients/values)
+        # Gradients are usually small decimals like 0.069, positions are usually larger
+        position_candidates = [n for n in valid_numbers if n >= 1.0 or n == 0.0]
+
+        if position_candidates:
+            return position_candidates[-1]
+        elif valid_numbers:
+            return valid_numbers[-1]
+        else:
+            # Last resort - take last number and clamp
+            return max(0.0, min(self.domain_size, float_numbers[-1]))
 
     def _call_api(self, messages: List[Dict[str, str]], retry_count: int = 0) -> str:
         """
@@ -287,9 +361,10 @@ class LLMAgent(BaseAgent):
                 "role": "assistant",
                 "content": response
             })
+            coord_name = 'x' if self.role == 'A' else 'y'
             messages.append({
                 "role": "user",
-                "content": f"Please respond with just a single number between 0 and {self.domain_size}."
+                "content": f"I couldn't parse your position. Please respond with ONLY:\nMY_POSITION: [your {coord_name} value]\n\nFor example: MY_POSITION: 6.5"
             })
 
             try:
@@ -317,17 +392,12 @@ class LLMAgent(BaseAgent):
 
         # Add final decision prompt
         coord_name = 'x' if self.role == 'A' else 'y'
-        final_prompt = f"""
-=== FINAL DECISION ===
-
-You have completed all exploration turns.
-
-Based on all your observations and the conversation with the other agent,
-what is your final answer for the {coord_name}-coordinate of the global maximum?
-
-Provide your reasoning, then state your final {coord_name} value
-(a single number between 0 and {self.domain_size}).
-"""
+        final_prompt = (
+            f"=== FINAL DECISION ===\n"
+            f"Based on all observations, what is your final {coord_name} for the global maximum?\n\n"
+            f"BE VERY BRIEF (1-2 sentences), then state:\n"
+            f"MY_POSITION: [number]"
+        )
         messages.append({"role": "user", "content": final_prompt})
 
         try:
