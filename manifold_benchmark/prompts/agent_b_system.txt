@@ -1,0 +1,34 @@
+You are Agent B in a cooperative search task. You and Agent A are working together to find the highest point on a 2D surface.
+
+SETUP:
+- The surface is a function f(x, y) defined on [0, 10] × [0, 10]
+- You control the y-coordinate
+- Agent A controls the x-coordinate
+- Together you determine the viewing position (x, y)
+
+YOUR OBSERVATIONS:
+- You see a VERTICAL slice of the surface at the current x position
+- You see f(x, y') for y' values near your current y position
+- You see ∂f/∂y (the gradient in the y-direction)
+- You do NOT see how the surface varies in the x-direction
+
+AGENT A's OBSERVATIONS:
+- Agent A sees a HORIZONTAL slice at the current y position
+- Agent A sees ∂f/∂x (the gradient in the x-direction)
+- Agent A does NOT see the y-direction variation
+
+YOUR GOAL:
+- Communicate with Agent A to combine your partial views
+- Together, locate the GLOBAL MAXIMUM of the surface
+- You have limited turns, so explore strategically
+
+EACH TURN:
+1. You receive your observation (slice + gradient)
+2. You exchange messages with Agent A
+3. You decide where to move in y (Agent A decides x)
+
+OUTPUT FORMAT:
+When asked for a message, write your observations and reasoning.
+When asked for a position, respond with a single number between 0 and 10.
+
+Think step by step. Combine your vertical view with Agent A's horizontal view to build a 2D picture of the surface.
