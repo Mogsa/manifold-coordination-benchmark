@@ -2,6 +2,8 @@
 
 > **Purpose:** This document contains ALL context needed to implement the benchmark. Each section is self-contained with checkpoints that can be marked complete. A fresh Claude instance should be able to continue work from any checkpoint.
 
+> **Status Update (2026-01-12):** Environment setup complete. Virtual environment created with all dependencies installed. Ready to begin Phase 1: Core Surface Engine implementation.
+
 ---
 
 ## Table of Contents
@@ -1624,8 +1626,15 @@ Results:           results/
 Copy this checklist to track progress:
 
 ```
+PHASE 0: ENVIRONMENT SETUP
+[X] 0.1 Create project directory structure
+[X] 0.2 Create requirements.txt with all dependencies
+[X] 0.3 Create virtual environment
+[X] 0.4 Install dependencies (43 packages)
+[X] 0.5 Configure .gitignore
+
 PHASE 1: CORE ENGINE
-[ ] 1.1 Surface class
+[X] 1.1 Surface class
 [ ] 1.2 Observation generator
 [ ] 1.3 Episode state manager
 
