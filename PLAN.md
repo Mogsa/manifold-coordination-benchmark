@@ -1655,9 +1655,9 @@ PHASE 4: VISUALIZATION
 [ ] 4.4 Animation (optional)
 
 PHASE 5: EVALUATION
-[ ] 5.1 Batch runner
-[ ] 5.2 Statistical analysis
-[ ] 5.3 Baseline comparison
+[X] 5.1 Batch runner
+[X] 5.2 Statistical analysis
+[X] 5.3 Baseline comparison
 ```
 
 ---
