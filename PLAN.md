@@ -1649,9 +1649,9 @@ PHASE 3: EPISODE RUNNER
 [X] 3.2 Result logger
 
 PHASE 4: VISUALIZATION
-[ ] 4.1 3D surface plot
-[ ] 4.2 Agent position overlay
-[ ] 4.3 Slice visualization
+[X] 4.1 3D surface plot
+[X] 4.2 Agent position overlay
+[X] 4.3 Slice visualization
 [ ] 4.4 Animation (optional)
 
 PHASE 5: EVALUATION
