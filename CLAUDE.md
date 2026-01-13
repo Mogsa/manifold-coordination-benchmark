@@ -14,9 +14,9 @@ Two LLM agents jointly control a single "player" navigating a 2D surface f(x,y) 
 ## Current Status & Next Steps
 
 **Environment:** Setup complete with virtual environment and all dependencies installed
-**Current Phase:** Phase 3 - Episode Runner
-**Completed:** Phase 1 - Core Surface Engine ✅, Phase 2 - Agent Framework ✅, Checkpoint 3.1 - Turn Executor ✅
-**Next Checkpoint:** 3.2 Result Logger (manifold_benchmark/experiments/logger.py)
+**Current Phase:** Phase 4 - Visualization
+**Completed:** Phase 1 - Core Surface Engine ✅, Phase 2 - Agent Framework ✅, Phase 3 - Episode Runner ✅
+**Next Checkpoint:** 4.1 3D Surface Plot (manifold_benchmark/visualization/plot3d.py)
 
 Check PLAN.md "Appendix C: Checkpoint Summary" for detailed progress tracking and "Section 8: Implementation Checkpoints" for requirements.
 

@@ -1646,7 +1646,7 @@ PHASE 2: AGENT FRAMEWORK
 
 PHASE 3: EPISODE RUNNER
 [X] 3.1 Turn executor
-[ ] 3.2 Result logger
+[X] 3.2 Result logger
 
 PHASE 4: VISUALIZATION
 [ ] 4.1 3D surface plot
