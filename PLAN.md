@@ -1635,7 +1635,7 @@ PHASE 0: ENVIRONMENT SETUP
 
 PHASE 1: CORE ENGINE
 [X] 1.1 Surface class
-[ ] 1.2 Observation generator
+[X] 1.2 Observation generator
 [ ] 1.3 Episode state manager
 
 PHASE 2: AGENT FRAMEWORK
