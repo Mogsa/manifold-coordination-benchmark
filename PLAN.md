@@ -1639,10 +1639,10 @@ PHASE 1: CORE ENGINE
 [X] 1.3 Episode state manager
 
 PHASE 2: AGENT FRAMEWORK
-[ ] 2.1 Base agent interface
-[ ] 2.2 Random baseline agent
-[ ] 2.3 Greedy gradient agent
-[ ] 2.4 LLM agent
+[X] 2.1 Base agent interface
+[X] 2.2 Random baseline agent
+[X] 2.3 Greedy gradient agent
+[X] 2.4 LLM agent
 
 PHASE 3: EPISODE RUNNER
 [ ] 3.1 Turn executor
