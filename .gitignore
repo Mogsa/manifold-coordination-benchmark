@@ -37,3 +37,4 @@ results/*.csv
 
 # macOS
 .DS_Store
+.env

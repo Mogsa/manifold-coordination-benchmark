@@ -72,6 +72,9 @@ class LLMAgent(BaseAgent):
         # Track current position
         self.current_position = 5.0  # Start at center
 
+        # Store last reasoning for transcript capture
+        self.last_reasoning = ""
+
     def _load_system_prompt(self, prompt_path: Optional[str] = None) -> None:
         """
         Load system prompt from file.
@@ -351,6 +354,7 @@ class LLMAgent(BaseAgent):
 
         try:
             response = self._call_api(messages)
+            self.last_reasoning = response  # Capture full response
             new_position = self._parse_coordinate(response)
             return new_position
 
@@ -402,6 +406,7 @@ class LLMAgent(BaseAgent):
 
         try:
             response = self._call_api(messages)
+            self.last_reasoning = response  # Capture full response
             final_pos = self._parse_coordinate(response)
             return final_pos
         except Exception as e:
@@ -413,3 +418,4 @@ class LLMAgent(BaseAgent):
         """Reset agent state for new episode."""
         super().reset()
         self.current_position = 5.0  # Reset to center
+        self.last_reasoning = ""

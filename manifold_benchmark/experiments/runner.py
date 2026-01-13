@@ -110,6 +110,10 @@ class EpisodeRunner:
         obs_a_new, obs_b_new = self.episode.step(decision_a, decision_b)
         position_after = (decision_a, decision_b)
 
+        # Capture reasoning if available (LLM agents store this)
+        reasoning_a = getattr(self.agent_a, 'last_reasoning', '')
+        reasoning_b = getattr(self.agent_b, 'last_reasoning', '')
+
         # Record turn data
         turn_data = {
             "turn": turn_number,
@@ -118,6 +122,8 @@ class EpisodeRunner:
             "observation_b": obs_b,
             "message_a": message_a,
             "message_b": message_b,
+            "reasoning_a": reasoning_a,
+            "reasoning_b": reasoning_b,
             "decision_a": decision_a,
             "decision_b": decision_b,
             "position_after": position_after
@@ -181,6 +187,10 @@ class EpisodeRunner:
         y_final_decision = self.agent_b.final_decision()
         final_decision = (x_final_decision, y_final_decision)
 
+        # Capture final reasoning
+        final_reasoning_a = getattr(self.agent_a, 'last_reasoning', '')
+        final_reasoning_b = getattr(self.agent_b, 'last_reasoning', '')
+
         # Calculate score
         score = self.episode.get_score(x_final_decision, y_final_decision)
 
@@ -198,6 +208,8 @@ class EpisodeRunner:
             "final_observation_b": obs_b_final,
             "final_message_a": message_a_final,
             "final_message_b": message_b_final,
+            "final_reasoning_a": final_reasoning_a,
+            "final_reasoning_b": final_reasoning_b,
             "final_decision": final_decision,  # Agents' final answer
             "score": score,
             "optimal_position": (x_opt, y_opt),
