@@ -1645,7 +1645,7 @@ PHASE 2: AGENT FRAMEWORK
 [X] 2.4 LLM agent
 
 PHASE 3: EPISODE RUNNER
-[ ] 3.1 Turn executor
+[X] 3.1 Turn executor
 [ ] 3.2 Result logger
 
 PHASE 4: VISUALIZATION
