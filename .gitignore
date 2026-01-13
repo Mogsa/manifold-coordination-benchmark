@@ -1,0 +1,39 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+
+# Results and data
+results/*.json
+results/*.csv
+!results/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
