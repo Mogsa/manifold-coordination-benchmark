@@ -12,7 +12,7 @@ from manifold_benchmark.core.surface import Surface
 class ObservationGenerator:
     """Generates agent observations from surface."""
 
-    def __init__(self, surface: Surface, radius: float = 1.5, n_samples: int = 11):
+    def __init__(self, surface: Surface, radius: float = 0.5, n_samples: int = 11):
         """
         Initialize observation generator.
 
