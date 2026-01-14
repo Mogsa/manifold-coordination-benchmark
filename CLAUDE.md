@@ -4,105 +4,82 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Manifold Coordination Benchmark** — A benchmark for testing LLM multi-agent coordination on a joint optimization task.
+**Manifold Benchmark Suite** — Benchmarks for testing LLM reasoning capabilities.
 
+### Coordination Benchmark (Complete)
 Two LLM agents jointly control a single "player" navigating a 2D surface f(x,y) to find the global maximum:
 - Agent A controls x-coordinate, sees horizontal slices
 - Agent B controls y-coordinate, sees vertical slices
 - Neither can see the full surface — communication is necessary
 
-## Current Status & Next Steps
+### Temporal Benchmark (In Progress)
+A single LLM agent navigates a 1D surface f(x,t) that evolves over time:
+- Agent controls x-position, sees local slices + gradients
+- Surface changes according to hidden dynamics (peaks move, grow, shrink)
+- Agent must learn patterns and predict future states
 
-**Environment:** Setup complete with virtual environment and all dependencies installed
-**Current Phase:** ALL CORE PHASES COMPLETE ✅
-**Completed:**
-- Phase 1: Core Surface Engine ✅
-- Phase 2: Agent Framework ✅
-- Phase 3: Episode Runner ✅
-- Phase 4: Visualization (Core) ✅
-- Phase 5: Evaluation Harness ✅
+## Current Status
 
-**Next Steps:** Optional checkpoint 4.4 (Animation) or begin running experiments. See FUTURE_IDEAS.md for enhancement suggestions.
+| Benchmark | Status |
+|-----------|--------|
+| Coordination | ✅ Complete (all 5 phases) |
+| Temporal | 🔄 Phase 0 Complete, Phase 1 next |
 
-Check PLAN.md "Appendix C: Checkpoint Summary" for detailed progress tracking and "Section 8: Implementation Checkpoints" for requirements.
-
-## Essential Reading
-
-**PLAN.md** — Complete implementation specification with all requirements, API specs, and test cases. READ THE RELEVANT CHECKPOINT SECTION before starting work on any component.
+**Next Steps:** Begin Phase 1 of Temporal Benchmark (Core Engine). See Temporal_PLAN.md.
 
 ## Architecture Summary
 
 ```
-manifold_benchmark/
-├── core/           # Surface, observation, episode logic
-├── agents/         # Agent implementations (random, greedy, LLM)
-├── visualization/  # 3D plots, trajectory visualization
-├── experiments/    # Episode runner, evaluation harness
-├── prompts/        # LLM system prompts
-└── tests/          # Unit tests
+DISS/
+├── shared/             # Shared utilities for both benchmarks
+│   ├── gaussians.py    # Gaussian peak math (1D and 2D)
+│   ├── llm_utils.py    # LiteLLM wrapper, retry logic, parsing
+│   ├── logging.py      # Base result logging
+│   └── base_agent.py   # Abstract agent interfaces
+│
+├── coordination/       # 2-agent coordination benchmark
+│   ├── core/           # Surface, observation, episode logic
+│   ├── agents/         # Agent implementations (random, greedy, LLM)
+│   ├── visualization/  # 3D plots, trajectory visualization
+│   ├── experiments/    # Episode runner, evaluation harness
+│   ├── prompts/        # LLM system prompts
+│   └── tests/          # Unit tests
+│
+├── temporal/           # Temporal tracking benchmark (in progress)
+│   ├── core/           # (To be implemented)
+│   ├── agents/         # (To be implemented)
+│   └── ...
+│
+├── PLAN.md             # Coordination benchmark specification
+└── Temporal_PLAN.md    # Temporal benchmark specification
 ```
-
-## Key Design Decisions
-
-| Decision | Choice |
-|----------|--------|
-| Information asymmetry | Perpendicular 1D slices (Agent A: horizontal, Agent B: vertical) |
-| Movement | Continuous coordinates in [0, 10] |
-| Observation | Slice of radius R=1.5 with 11 samples + partial derivative |
-| Turns | N=10 exploration turns + final decision |
-| Scoring | f(final) / f(optimal), normalized to [0, 1] |
-
-## Implementation Status
-
-Check PLAN.md "Appendix C: Checkpoint Summary" for current progress.
-
-## Model Assignment (Opus vs Sonnet)
-
-See PLAN.md "Appendix D" for detailed reasoning. Quick reference:
-
-**Use OPUS for:**
-- 2.4 LLM Agent (parsing edge cases, API integration)
-- 3.1 Turn Executor (orchestration correctness)
-- 5.2 Statistical Analysis (research validity)
-- Prompts (LLM behavior understanding)
-- Architecture reviews at phase boundaries
-
-**Use SONNET for:**
-- All Phase 1 (Surface, Observation, Episode)
-- 2.1-2.3 (Base Agent, Random, Greedy)
-- 3.2 Logger, 4.x Visualization, 5.1/5.3 (straightforward)
 
 ## Development Commands
 
 ```bash
-# Activate virtual environment (REQUIRED before any other commands)
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Activate virtual environment (REQUIRED)
+source venv/bin/activate
 
-# Run all tests
-pytest manifold_benchmark/tests/
+# Run coordination tests
+pytest coordination/tests/ -v
 
 # Run specific test file
-pytest manifold_benchmark/tests/test_surface.py
+pytest coordination/tests/test_surface.py -v
 
-# Run tests with verbose output
-pytest manifold_benchmark/tests/ -v
+# Run coordination episode
+python -m coordination.experiments.runner --surface two_peaks_clear
 
-# Run single episode (after Phase 3 implementation)
-python -m manifold_benchmark.experiments.runner --surface two_peaks_clear
-
-# Run full evaluation (after Phase 5 implementation)
-python -m manifold_benchmark.experiments.eval --config configs/experiments.yaml
+# Run coordination evaluation
+python -m coordination.experiments.eval --config configs/experiments.yaml
 ```
 
 ## Environment Setup
-
-**Virtual environment is already configured.** To work in this project:
 
 ```bash
 # 1. Activate virtual environment
 source venv/bin/activate
 
-# 2. Set API keys (only needed for Phase 2.4: LLM Agent)
+# 2. Set API keys (for LLM agents)
 export OPENAI_API_KEY="your-key-here"
 export ANTHROPIC_API_KEY="your-key-here"
 
@@ -111,37 +88,35 @@ python --version  # Should show Python 3.13.7
 pytest --version  # Should show pytest 9.0.2
 ```
 
+## Key Design Decisions
+
+### Coordination Benchmark
+| Decision | Choice |
+|----------|--------|
+| Information asymmetry | Perpendicular 1D slices |
+| Movement | Continuous coordinates in [0, 10] |
+| Observation | Slice radius R=1.5, 11 samples + gradient |
+| Turns | N=10 exploration + final decision |
+| Scoring | f(final) / f(optimal) |
+
+### Temporal Benchmark
+| Decision | Choice |
+|----------|--------|
+| Observation | Local slice radius R=0.5, 11 samples + ∂f/∂x + ∂f/∂t |
+| Timesteps | T=20 per run, max 10 exploration runs |
+| Mode | Function mode (batch 20 positions per run) |
+| Scoring | Cumulative reward / optimal reward |
+
 ## Workflow
 
-**For each checkpoint:**
-1. Read the checkpoint requirements in PLAN.md Section 8
-2. Read the API specification in PLAN.md Section 10 for the component
-3. Read the test cases in PLAN.md Section 12 for expected behavior
+**For Coordination:** See PLAN.md for checkpoint details.
+
+**For Temporal:** See Temporal_PLAN.md for checkpoint details.
+
+1. Read the checkpoint requirements in the relevant PLAN.md
+2. Read the API specification for the component
+3. Read the test cases for expected behavior
 4. Implement the component
-5. Run tests: `pytest manifold_benchmark/tests/test_<module>.py -v`
-6. Mark checkpoint complete in PLAN.md Appendix C
-7. Commit with checkpoint reference: `git commit -m "Complete checkpoint 1.1: Surface class"`
-8. Update "Current Status" in this file when completing major phases
-
-## Critical Implementation Details
-
-**Information Asymmetry (Core Design):**
-- Agent A sees horizontal slice: f(x', y_b) for x' in [x_a - R, x_a + R]
-- Agent B sees vertical slice: f(x_a, y') for y' in [y_b - R, y_b + R]
-- Agent A receives ∂f/∂x (NOT ∂f/∂y), Agent B receives ∂f/∂y (NOT ∂f/∂x)
-- Slices are perpendicular and centered at view point (x_a, y_b)
-
-**Key Parameters:**
-```python
-DOMAIN = [0, 10] × [0, 10]
-OBSERVATION_RADIUS = 1.5
-N_SAMPLES = 11
-N_TURNS = 10
-INITIAL_POSITION = (5.0, 5.0)
-```
-
-**Surface Functions:**
-All surfaces are sums of Gaussian peaks defined by (cx, cy, height, sigma). See PLAN.md Section 7 for pre-defined test surfaces.
-
-**Scoring:**
-Score = f(x_final, y_final) / f(x_optimal, y_optimal), normalized to [0, 1]
+5. Run tests: `pytest <module>/tests/test_<file>.py -v`
+6. Mark checkpoint complete in PLAN.md Appendix
+7. Commit with checkpoint reference
