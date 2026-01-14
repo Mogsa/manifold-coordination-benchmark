@@ -76,32 +76,41 @@ Two LLM agents jointly control a single "player" navigating a 2D surface f(x,y) 
 - Agent B controls y-coordinate, sees vertical slices
 - Neither can see the full surface — communication is necessary
 
-### Temporal Benchmark (In Progress)
+### Temporal Benchmark (Paused)
 A single LLM agent navigates a 1D surface f(x,t) that evolves over time:
 - Agent controls x-position, sees local slices + gradients
 - Surface changes according to hidden dynamics (peaks move, grow, shrink)
 - Agent must learn patterns and predict future states
+
+### Telepathic Benchmark (In Progress)
+Two LLM agents play a communication game testing compositional reasoning:
+- **Seer** observes input-output samples of a function, encodes it as abstract tokens
+- **Doer** receives only the token message, must compute output for new inputs
+- **Bandwidth constraint** (≤5 tokens) forces genuine compression, not memorization
+- **Key metric: Φ** = accuracy on novel compositions / accuracy on primitives
+- Tests whether LLMs learn compositional grammar vs. lookup tables
 
 ## Current Status
 
 | Benchmark | Status |
 |-----------|--------|
 | Coordination | ✅ Complete (all 5 phases) |
-| Temporal | 🔄 Phase 0 Complete, Phase 1 next |
+| Temporal | ⏸️ Paused at Phase 0 |
+| Telepathic | 🔄 Phase 1 Complete (Core Engine), Phase 2 next |
 
-**Next Steps:** Begin Phase 1 of Temporal Benchmark (Core Engine). See Temporal_PLAN.md.
+**Next Steps:** Phase 2 of Telepathic Benchmark (Agents + Prompts). See Telepathic_Plan.md.
 
 ## Architecture Summary
 
 ```
 DISS/
-├── shared/             # Shared utilities for both benchmarks
+├── shared/             # Shared utilities for all benchmarks
 │   ├── gaussians.py    # Gaussian peak math (1D and 2D)
 │   ├── llm_utils.py    # LiteLLM wrapper, retry logic, parsing
 │   ├── logging.py      # Base result logging
 │   └── base_agent.py   # Abstract agent interfaces
 │
-├── coordination/       # 2-agent coordination benchmark
+├── coordination/       # 2-agent coordination benchmark (Complete)
 │   ├── core/           # Surface, observation, episode logic
 │   ├── agents/         # Agent implementations (random, greedy, LLM)
 │   ├── visualization/  # 3D plots, trajectory visualization
@@ -109,13 +118,21 @@ DISS/
 │   ├── prompts/        # LLM system prompts
 │   └── tests/          # Unit tests
 │
-├── temporal/           # Temporal tracking benchmark (in progress)
+├── temporal/           # Temporal tracking benchmark (Paused)
 │   ├── core/           # (To be implemented)
 │   ├── agents/         # (To be implemented)
 │   └── ...
 │
+├── telepathic/         # Compositional communication benchmark (In Progress)
+│   ├── core/           # Functions, sampling, protocol, evaluation, few-shot
+│   ├── agents/         # Seer/Doer agents (To be implemented)
+│   ├── experiments/    # Trial runner (To be implemented)
+│   ├── prompts/        # Few-shot and zero-shot prompts
+│   └── tests/          # Unit tests
+│
 ├── PLAN.md             # Coordination benchmark specification
-└── Temporal_PLAN.md    # Temporal benchmark specification
+├── Temporal_PLAN.md    # Temporal benchmark specification
+└── Telepathic_Plan.md  # Telepathic benchmark specification
 ```
 
 ## Development Commands
@@ -127,8 +144,12 @@ source venv/bin/activate
 # Run coordination tests
 pytest coordination/tests/ -v
 
+# Run telepathic tests
+pytest telepathic/tests/ -v
+
 # Run specific test file
 pytest coordination/tests/test_surface.py -v
+pytest telepathic/tests/test_core.py -v
 
 # Run coordination episode
 python -m coordination.experiments.runner --surface two_peaks_clear
@@ -170,6 +191,16 @@ pytest --version  # Should show pytest 9.0.2
 | Timesteps | T=20 per run, max 10 exploration runs |
 | Mode | Function mode (batch 20 positions per run) |
 | Scoring | Cumulative reward / optimal reward |
+
+### Telepathic Benchmark
+| Decision | Choice |
+|----------|--------|
+| Primitives | 5 MVP: sin(α), cos(β), square(γ), abs(δ), neg(ε) |
+| Sample points | 5 fixed: [-2, -1, 0, 1, 2] |
+| Test points | 3 fixed: [-1.5, 0.5, 1.5] |
+| Max message | 5 tokens, hyphen-separated |
+| Tolerance | 1% relative (absolute for near-zero) |
+| Key metric | Φ = novel_accuracy / primitive_accuracy |
 
 ## Workflow
 
