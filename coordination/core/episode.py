@@ -5,8 +5,8 @@ This module manages episode state, turn progression, and scoring.
 """
 
 from typing import Tuple, List
-from manifold_benchmark.core.surface import Surface
-from manifold_benchmark.core.observation import ObservationGenerator
+from coordination.core.surface import Surface
+from coordination.core.observation import ObservationGenerator
 
 
 class Episode:

@@ -6,7 +6,7 @@ and optimal point finding.
 """
 
 import pytest
-from manifold_benchmark.core.surface import Surface
+from coordination.core.surface import Surface
 
 
 def test_single_peak_evaluation():

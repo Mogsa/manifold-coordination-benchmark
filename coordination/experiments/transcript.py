@@ -2,8 +2,8 @@
 Simple transcript viewer for episode results.
 
 Usage:
-    python -m manifold_benchmark.experiments.transcript results/path/to/run.json
-    python -m manifold_benchmark.experiments.transcript results/path/to/run.json --turn 3
+    python -m coordination.experiments.transcript results/path/to/run.json
+    python -m coordination.experiments.transcript results/path/to/run.json --turn 3
 """
 
 import json

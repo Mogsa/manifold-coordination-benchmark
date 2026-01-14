@@ -7,7 +7,7 @@ import os
 import json
 import tempfile
 import shutil
-from manifold_benchmark.experiments.logger import ResultLogger
+from coordination.experiments.logger import ResultLogger
 
 
 @pytest.fixture

@@ -4,7 +4,7 @@ Random agent module for the Manifold Coordination Benchmark.
 This module implements a random baseline agent for lower-bound performance.
 """
 
-from manifold_benchmark.agents.base import BaseAgent
+from coordination.agents.base import BaseAgent
 import numpy as np
 
 

@@ -6,8 +6,8 @@ boundary handling, and gradient inclusion.
 """
 
 import pytest
-from manifold_benchmark.core.surface import Surface
-from manifold_benchmark.core.observation import ObservationGenerator
+from coordination.core.surface import Surface
+from coordination.core.observation import ObservationGenerator
 
 
 def test_horizontal_slice_samples():

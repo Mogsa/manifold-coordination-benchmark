@@ -10,14 +10,14 @@ import shutil
 import json
 from pathlib import Path
 
-from manifold_benchmark.experiments.eval import (
+from coordination.experiments.eval import (
     run_evaluation, TEST_SURFACES, create_agent_from_config
 )
-from manifold_benchmark.experiments.analysis import (
+from coordination.experiments.analysis import (
     load_results, compute_summary_stats, compare_agents, generate_report,
     plot_results, plot_comparison_matrix
 )
-from manifold_benchmark.experiments.baselines import (
+from coordination.experiments.baselines import (
     run_random_baseline, run_greedy_baseline, run_all_baselines
 )
 

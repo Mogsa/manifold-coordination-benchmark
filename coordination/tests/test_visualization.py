@@ -8,11 +8,11 @@ and produce the expected output structures.
 import pytest
 import matplotlib.pyplot as plt
 import numpy as np
-from manifold_benchmark.core.surface import Surface
-from manifold_benchmark.visualization.plot3d import (
+from coordination.core.surface import Surface
+from coordination.visualization.plot3d import (
     plot_surface, plot_episode, plot_surface_contour
 )
-from manifold_benchmark.visualization.slices import (
+from coordination.visualization.slices import (
     plot_slices, plot_observation_comparison
 )
 

@@ -6,11 +6,11 @@ observations, communication, and decisions between agents.
 """
 
 import pytest
-from manifold_benchmark.core.surface import Surface
-from manifold_benchmark.core.episode import Episode
-from manifold_benchmark.agents.random_agent import RandomAgent
-from manifold_benchmark.agents.greedy_agent import GreedyAgent
-from manifold_benchmark.experiments.runner import EpisodeRunner
+from coordination.core.surface import Surface
+from coordination.core.episode import Episode
+from coordination.agents.random_agent import RandomAgent
+from coordination.agents.greedy_agent import GreedyAgent
+from coordination.experiments.runner import EpisodeRunner
 
 
 class MockAgent:

@@ -13,13 +13,13 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 from tqdm import tqdm
 
-from manifold_benchmark.core.surface import Surface
-from manifold_benchmark.core.episode import Episode
-from manifold_benchmark.agents.random_agent import RandomAgent
-from manifold_benchmark.agents.greedy_agent import GreedyAgent
-from manifold_benchmark.agents.llm_agent import LLMAgent
-from manifold_benchmark.experiments.runner import EpisodeRunner
-from manifold_benchmark.experiments.logger import ResultLogger
+from coordination.core.surface import Surface
+from coordination.core.episode import Episode
+from coordination.agents.random_agent import RandomAgent
+from coordination.agents.greedy_agent import GreedyAgent
+from coordination.agents.llm_agent import LLMAgent
+from coordination.experiments.runner import EpisodeRunner
+from coordination.experiments.logger import ResultLogger
 
 
 # Pre-defined test surfaces from PLAN.md Section 7.4
@@ -73,9 +73,9 @@ def create_agent_from_config(config: dict, role: str):
     Returns:
         Agent instance
     """
-    from manifold_benchmark.agents.random_agent import RandomAgent
-    from manifold_benchmark.agents.greedy_agent import GreedyAgent
-    from manifold_benchmark.agents.llm_agent import LLMAgent
+    from coordination.agents.random_agent import RandomAgent
+    from coordination.agents.greedy_agent import GreedyAgent
+    from coordination.agents.llm_agent import LLMAgent
 
     agent_type = config.get('type', 'random').lower()
 
@@ -94,7 +94,7 @@ def create_agent_from_config(config: dict, role: str):
         max_tokens = config.get('max_tokens', 500)
 
         # Construct system prompt path based on role
-        system_prompt_path = f"manifold_benchmark/prompts/agent_{role.lower()}_system.txt"
+        system_prompt_path = f"coordination/prompts/agent_{role.lower()}_system.txt"
 
         return LLMAgent(
             role=role,
@@ -134,8 +134,8 @@ def run_evaluation(
     Returns:
         Dictionary with evaluation results and metadata
     """
-    from manifold_benchmark.core.surface import Surface
-    from manifold_benchmark.core.episode import Episode
+    from coordination.core.surface import Surface
+    from coordination.core.episode import Episode
     from tqdm import tqdm
     import os
     import time

@@ -5,7 +5,7 @@ This module implements an LLM-based agent that uses LiteLLM to support
 100+ LLM providers including OpenAI, Anthropic, Google Gemini, and more.
 """
 
-from manifold_benchmark.agents.base import BaseAgent
+from coordination.agents.base import BaseAgent
 import os
 import re
 import time

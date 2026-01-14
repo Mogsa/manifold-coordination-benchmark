@@ -6,7 +6,7 @@ This module generates agent observations (1D slices) from 2D surfaces.
 
 from typing import List
 import numpy as np
-from manifold_benchmark.core.surface import Surface
+from coordination.core.surface import Surface
 
 
 class ObservationGenerator:

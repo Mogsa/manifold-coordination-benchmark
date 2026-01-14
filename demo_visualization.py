@@ -4,9 +4,9 @@ Demo script to visualize the plots.
 Run this to see how the visualization functions work.
 """
 
-from manifold_benchmark.core.surface import Surface
-from manifold_benchmark.visualization.plot3d import plot_surface, plot_episode, plot_surface_contour
-from manifold_benchmark.visualization.slices import plot_slices, plot_observation_comparison
+from coordination.core.surface import Surface
+from coordination.visualization.plot3d import plot_surface, plot_episode, plot_surface_contour
+from coordination.visualization.slices import plot_slices, plot_observation_comparison
 
 # Create a two-peak surface (interesting to visualize)
 peaks = [

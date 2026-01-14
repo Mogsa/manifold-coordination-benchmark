@@ -9,8 +9,8 @@ import os
 from typing import List, Dict, Optional
 import pandas as pd
 
-from manifold_benchmark.experiments.eval import run_evaluation, TEST_SURFACES
-from manifold_benchmark.experiments.analysis import (
+from coordination.experiments.eval import run_evaluation, TEST_SURFACES
+from coordination.experiments.analysis import (
     load_results, compute_summary_stats, compare_agents, generate_report
 )
 

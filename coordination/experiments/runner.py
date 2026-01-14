@@ -6,8 +6,8 @@ communication, and decisions between agents.
 """
 
 from typing import Dict, Any
-from manifold_benchmark.core.episode import Episode
-from manifold_benchmark.agents.base import BaseAgent
+from coordination.core.episode import Episode
+from coordination.agents.base import BaseAgent
 
 
 class EpisodeRunner:

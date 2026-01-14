@@ -4,7 +4,7 @@ Greedy agent module for the Manifold Coordination Benchmark.
 This module implements a gradient-following baseline agent.
 """
 
-from manifold_benchmark.agents.base import BaseAgent
+from coordination.agents.base import BaseAgent
 import numpy as np
 
 
