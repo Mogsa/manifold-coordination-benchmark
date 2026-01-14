@@ -938,71 +938,71 @@ TEST_COMPOSITIONS = [
 
 ### Phase 0: Setup
 
-#### Checkpoint 0.1: Directory Structure
-- [ ] Create `telepathic/` directory structure
-- [ ] Verify shared utilities available
-- [ ] Create `__init__.py` files
+#### Checkpoint 0.1: Directory Structure ✅
+- [x] Create `telepathic/` directory structure
+- [x] Verify shared utilities available
+- [x] Create `__init__.py` files
 
-### Phase 1: Core Engine
+### Phase 1: Core Engine ✅
 
-#### Checkpoint 1.1: Function Library
-- [ ] **File:** `telepathic/core/functions.py`
-- [ ] **Requirements:**
-  - [ ] Implement all 10 primitive functions
-  - [ ] Safe handling of edge cases (sqrt of negative, log of zero)
-  - [ ] Composition operator `compose(*funcs)`
-  - [ ] Function registry with metadata
-- [ ] **Tests:**
-  - [ ] Each primitive evaluates correctly
-  - [ ] Compositions work in correct order
-  - [ ] Edge cases handled gracefully
+#### Checkpoint 1.1: Function Library ✅
+- [x] **File:** `telepathic/core/functions.py`
+- [x] **Requirements:**
+  - [x] Implement 5 MVP primitive functions (sin, cos, square, abs, neg)
+  - [x] Safe handling of edge cases (sqrt of negative, log of zero)
+  - [x] Composition operator `compose(*funcs)`
+  - [x] Function registry with metadata
+- [x] **Tests:**
+  - [x] Each primitive evaluates correctly
+  - [x] Compositions work in correct order
+  - [x] Edge cases handled gracefully
 
-#### Checkpoint 1.2: Sample Generator
-- [ ] **File:** `telepathic/core/sampling.py`
-- [ ] **Requirements:**
-  - [ ] Generate fixed sample points for any function
-  - [ ] Generate test points (different from samples)
-  - [ ] Format samples for Seer observation
-- [ ] **Tests:**
-  - [ ] Correct number of samples
-  - [ ] Sample and test points don't overlap
+#### Checkpoint 1.2: Sample Generator ✅
+- [x] **File:** `telepathic/core/sampling.py`
+- [x] **Requirements:**
+  - [x] Generate fixed sample points for any function
+  - [x] Generate test points (different from samples)
+  - [x] Format samples for Seer observation
+- [x] **Tests:**
+  - [x] Correct number of samples
+  - [x] Sample and test points don't overlap
 
-#### Checkpoint 1.3: Protocol Manager
-- [ ] **File:** `telepathic/core/protocol.py`
-- [ ] **Requirements:**
-  - [ ] Define vocabulary (10 tokens)
-  - [ ] Validate message format
-  - [ ] Parse message into token sequence
-  - [ ] Enforce bandwidth constraint (max 5 tokens)
-- [ ] **Tests:**
-  - [ ] Valid messages accepted
-  - [ ] Invalid messages rejected
-  - [ ] Token parsing correct
+#### Checkpoint 1.3: Protocol Manager ✅
+- [x] **File:** `telepathic/core/protocol.py`
+- [x] **Requirements:**
+  - [x] Define vocabulary (10 tokens)
+  - [x] Validate message format
+  - [x] Parse message into token sequence
+  - [x] Enforce bandwidth constraint (max 5 tokens)
+- [x] **Tests:**
+  - [x] Valid messages accepted
+  - [x] Invalid messages rejected
+  - [x] Token parsing correct
 
-#### Checkpoint 1.4: Evaluation Engine
-- [ ] **File:** `telepathic/core/evaluation.py`
-- [ ] **Requirements:**
-  - [ ] Score prediction against expected
-  - [ ] Relative tolerance (1%)
-  - [ ] Handle near-zero expected values
-  - [ ] Aggregate scores across trials
-- [ ] **Tests:**
-  - [ ] Correct predictions score 1
-  - [ ] Incorrect predictions score 0
-  - [ ] Edge cases (zero, very large) handled
+#### Checkpoint 1.4: Evaluation Engine ✅
+- [x] **File:** `telepathic/core/evaluation.py`
+- [x] **Requirements:**
+  - [x] Score prediction against expected
+  - [x] Relative tolerance (1%)
+  - [x] Handle near-zero expected values
+  - [x] Aggregate scores across trials
+- [x] **Tests:**
+  - [x] Correct predictions score 1
+  - [x] Incorrect predictions score 0
+  - [x] Edge cases (zero, very large) handled
 
-#### Checkpoint 1.5: Few-Shot Generator
-- [ ] **File:** `telepathic/core/few_shot.py`
-- [ ] **Requirements:**
-  - [ ] Generate primitive examples (5 primitives: sin, cos, square, abs, neg)
-  - [ ] Generate composition examples (2: α-γ, δ-α)
-  - [ ] Format examples for Seer system prompt
-  - [ ] Format examples for Doer system prompt
-  - [ ] Define held-out compositions for Phase 2 testing
-- [ ] **Tests:**
-  - [ ] All primitive examples have correct (x, y) pairs
-  - [ ] Composition examples have correct (x, y) pairs
-  - [ ] Formatting is consistent between Seer and Doer
+#### Checkpoint 1.5: Few-Shot Generator ✅
+- [x] **File:** `telepathic/core/few_shot.py`
+- [x] **Requirements:**
+  - [x] Generate primitive examples (5 primitives: sin, cos, square, abs, neg)
+  - [x] Generate composition examples (2: α-γ, δ-α)
+  - [x] Format examples for Seer system prompt
+  - [x] Format examples for Doer system prompt
+  - [x] Define held-out compositions for Phase 2 testing
+- [x] **Tests:**
+  - [x] All primitive examples have correct (x, y) pairs
+  - [x] Composition examples have correct (x, y) pairs
+  - [x] Formatting is consistent between Seer and Doer
 
 ---
 
@@ -2279,14 +2279,14 @@ Results:          results/telepathic/
 
 ```
 PHASE 0: SETUP
-[ ] 0.1 Directory structure
+[x] 0.1 Directory structure
 
 PHASE 1: CORE ENGINE
-[ ] 1.1 Function library (5 MVP primitives)
-[ ] 1.2 Sample generator
-[ ] 1.3 Protocol manager
-[ ] 1.4 Evaluation engine
-[ ] 1.5 Few-shot generator  ← NEW
+[x] 1.1 Function library (5 MVP primitives)
+[x] 1.2 Sample generator
+[x] 1.3 Protocol manager
+[x] 1.4 Evaluation engine
+[x] 1.5 Few-shot generator
 
 PHASE 2: AGENTS
 [ ] 2.1 Base agent interface
