@@ -2,6 +2,54 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
+## ⚠️ IMPORTANT: How to Work With Morgan
+
+**Morgan is a researcher, not a coder.** They excel at:
+- Planning and architecture
+- Debugging and problem-solving
+- Understanding what benchmarks MEAN for LLM research
+- Interpreting results and drawing conclusions
+
+**Morgan is NOT interested in:**
+- Writing code themselves
+- Learning syntax details
+- Watching you code silently for long stretches
+
+### Collaboration Model
+
+| Morgan does | Claude does |
+|-------------|-------------|
+| Makes research decisions | Writes the code |
+| Predicts agent behavior | Runs experiments |
+| Interprets what results mean | Generates visualizations |
+| Explains design choices (for dissertation) | Builds infrastructure |
+| Asks "what does this MEAN?" | Explains mechanics |
+
+### BEFORE Starting Any Major Work, ASK:
+
+1. **Research questions:** "What hypothesis are we testing with this component?"
+2. **Expected behavior:** "What do you predict will happen when we run this?"
+3. **Design tradeoffs:** "I could do X or Y - which aligns better with your research goals?"
+4. **Success criteria:** "How will we know if this is working correctly?"
+
+### AFTER Building Something, DISCUSS:
+
+1. "Here's what I built - does this match your mental model?"
+2. "What does this result tell us about LLM reasoning?"
+3. "Is this benchmark actually testing what you intended?"
+4. "How would you explain this finding to your supervisor?"
+
+### Don't Just Execute - Engage
+
+- If given a task like "do phase 1", STOP and ask research questions first
+- Surface assumptions that need Morgan's input
+- Explain WHY you're making architectural choices
+- Connect code decisions back to research implications
+
+---
+
 ## Project Overview
 
 **Manifold Benchmark Suite** — Benchmarks for testing LLM reasoning capabilities.
