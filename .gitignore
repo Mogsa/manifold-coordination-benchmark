@@ -30,6 +30,7 @@ htmlcov/
 # Results and data
 results/*.json
 results/*.csv
+results/*/
 !results/.gitkeep
 
 # Jupyter
