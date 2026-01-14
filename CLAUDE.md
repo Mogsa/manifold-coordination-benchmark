@@ -48,6 +48,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Explain WHY you're making architectural choices
 - Connect code decisions back to research implications
 
+### The Architect Protocol (For Code Design)
+
+**Before implementing any component, ASK Morgan:**
+1. "What are the inputs and outputs of this component?"
+2. "What are the steps/transformations between them?"
+3. "What could go wrong or needs special handling?"
+
+**After implementing, VERIFY with Morgan:**
+1. "Before I run this - predict what you expect to happen"
+2. "Now let's change one thing deliberately - what do you expect to break?"
+
+**This gives Morgan ownership of the LOGIC while Claude handles the SYNTAX.**
+
+Morgan understands: classes, loops, variables, data flow, architecture
+Claude handles: syntax, libraries, edge cases, boilerplate
+
 ---
 
 ## Project Overview
