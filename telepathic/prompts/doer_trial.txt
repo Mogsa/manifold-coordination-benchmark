@@ -1,0 +1,12 @@
+═══════════════════════════════════════════════════════════════════
+YOUR TURN - DECODE AND COMPUTE:
+
+Message: {message}
+Test input: {x_test}
+
+Decode the token(s) and compute the output.
+Remember: "X-Y" means apply Y first, then X.
+
+Think step by step, then provide your answer.
+
+PREDICTION:

@@ -1,0 +1,105 @@
+You are the SEER in a function communication game.
+
+YOUR TASK:
+- You observe input-output samples of a mathematical function
+- You must encode the function as a short message using abstract tokens
+- Your message must use ONLY tokens from the vocabulary
+- Maximum 5 tokens, separated by hyphens if multiple
+
+VOCABULARY: α, β, γ, δ, ε
+
+Learn the token meanings from these examples:
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 1 (primitive):
+Samples:
+  f(-2.0) = -0.9093
+  f(-1.0) = -0.8415
+  f(0.0) = 0.0000
+  f(1.0) = 0.8415
+  f(2.0) = 0.9093
+MESSAGE: α
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 2 (primitive):
+Samples:
+  f(-2.0) = -0.4161
+  f(-1.0) = 0.5403
+  f(0.0) = 1.0000
+  f(1.0) = 0.5403
+  f(2.0) = -0.4161
+MESSAGE: β
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 3 (primitive):
+Samples:
+  f(-2.0) = 4.0000
+  f(-1.0) = 1.0000
+  f(0.0) = 0.0000
+  f(1.0) = 1.0000
+  f(2.0) = 4.0000
+MESSAGE: γ
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 4 (primitive):
+Samples:
+  f(-2.0) = 2.0000
+  f(-1.0) = 1.0000
+  f(0.0) = 0.0000
+  f(1.0) = 1.0000
+  f(2.0) = 2.0000
+MESSAGE: δ
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 5 (primitive):
+Samples:
+  f(-2.0) = 2.0000
+  f(-1.0) = 1.0000
+  f(0.0) = 0.0000
+  f(1.0) = -1.0000
+  f(2.0) = -2.0000
+MESSAGE: ε
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 6 (composition):
+Samples:
+  f(-2.0) = -0.7568
+  f(-1.0) = 0.8415
+  f(0.0) = 0.0000
+  f(1.0) = 0.8415
+  f(2.0) = -0.7568
+MESSAGE: α-γ
+(This combines α and γ: first apply γ to x, then apply α to the result)
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 7 (composition):
+Samples:
+  f(-2.0) = 0.9093
+  f(-1.0) = 0.8415
+  f(0.0) = 0.0000
+  f(1.0) = 0.8415
+  f(2.0) = 0.9093
+MESSAGE: δ-α
+(This combines δ and α: first apply α to x, then apply δ to the result)
+═══════════════════════════════════════════════════════════════════
+
+COMPOSITION RULE:
+When you write "X-Y", it means: first apply Y, then apply X to that result.
+So "α-γ" means: compute γ(x), then compute α(γ(x)).
+
+OUTPUT FORMAT (CRITICAL):
+You MUST end your response with exactly this format:
+MESSAGE: <your_tokens_here>
+
+Examples of valid output:
+MESSAGE: α
+MESSAGE: β-γ
+MESSAGE: δ-α-γ
+
+DO NOT include any other text after MESSAGE: - just the tokens.

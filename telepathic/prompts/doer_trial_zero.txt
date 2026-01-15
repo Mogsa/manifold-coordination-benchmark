@@ -1,0 +1,11 @@
+═══════════════════════════════════════════════════════════════════
+DECODE AND COMPUTE:
+
+Message from Seer: {message}
+Test input: {x_test}
+
+What function did the Seer encode? Compute f({x_test}).
+
+Think step by step, then provide your answer.
+
+PREDICTION:

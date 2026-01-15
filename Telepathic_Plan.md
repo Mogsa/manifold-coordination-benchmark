@@ -1006,46 +1006,46 @@ TEST_COMPOSITIONS = [
 
 ---
 
-### Phase 2: Agents
+### Phase 2: Agents ✅
 
-#### Checkpoint 2.1: Base Agent
-- [ ] **File:** `telepathic/agents/base.py`
-- [ ] **Requirements:**
-  - [ ] Abstract base class for agents
-  - [ ] Define interface for Seer and Doer
-- [ ] **Tests:**
-  - [ ] Interface is implementable
+#### Checkpoint 2.1: Base Agent ✅
+- [x] **File:** `telepathic/agents/base.py`
+- [x] **Requirements:**
+  - [x] Abstract base class for agents
+  - [x] Define interface for Seer and Doer
+- [x] **Tests:**
+  - [x] Interface is implementable
 
-#### Checkpoint 2.2: Seer Agent
-- [ ] **File:** `telepathic/agents/seer.py`
-- [ ] **Requirements:**
-  - [ ] Receive samples and vocabulary
-  - [ ] Generate message (≤5 tokens)
-  - [ ] Use shared LLM utilities
-  - [ ] Parse response for message
-- [ ] **Tests:**
-  - [ ] Generates valid messages
-  - [ ] Respects bandwidth constraint
+#### Checkpoint 2.2: Seer Agent ✅
+- [x] **File:** `telepathic/agents/seer.py`
+- [x] **Requirements:**
+  - [x] Receive samples and vocabulary
+  - [x] Generate message (≤5 tokens)
+  - [x] Use shared LLM utilities
+  - [x] Parse response for message
+- [x] **Tests:**
+  - [x] Generates valid messages
+  - [x] Respects bandwidth constraint
 
-#### Checkpoint 2.3: Doer Agent
-- [ ] **File:** `telepathic/agents/doer.py`
-- [ ] **Requirements:**
-  - [ ] Receive message and test input
-  - [ ] Generate numerical prediction
-  - [ ] Use shared LLM utilities
-  - [ ] Parse response for number
-- [ ] **Tests:**
-  - [ ] Produces numerical output
-  - [ ] Handles malformed messages gracefully
+#### Checkpoint 2.3: Doer Agent ✅
+- [x] **File:** `telepathic/agents/doer.py`
+- [x] **Requirements:**
+  - [x] Receive message and test input
+  - [x] Generate numerical prediction
+  - [x] Use shared LLM utilities
+  - [x] Parse response for number
+- [x] **Tests:**
+  - [x] Produces numerical output
+  - [x] Handles malformed messages gracefully
 
-#### Checkpoint 2.4: Random Baseline Agent
-- [ ] **File:** `telepathic/agents/random_agent.py`
-- [ ] **Requirements:**
-  - [ ] Seer: Random tokens
-  - [ ] Doer: Random number in expected range
-  - [ ] Deterministic with seed
-- [ ] **Tests:**
-  - [ ] Same seed = same behavior
+#### Checkpoint 2.4: Random Baseline Agent ✅
+- [x] **File:** `telepathic/agents/random_agent.py`
+- [x] **Requirements:**
+  - [x] Seer: Random tokens
+  - [x] Doer: Random number in expected range
+  - [x] Deterministic with seed
+- [x] **Tests:**
+  - [x] Same seed = same behavior
 
 ---
 
@@ -2289,10 +2289,10 @@ PHASE 1: CORE ENGINE
 [x] 1.5 Few-shot generator
 
 PHASE 2: AGENTS
-[ ] 2.1 Base agent interface
-[ ] 2.2 Seer agent (with few-shot prompt)
-[ ] 2.3 Doer agent (with few-shot prompt)
-[ ] 2.4 Random baseline
+[x] 2.1 Base agent interface
+[x] 2.2 Seer agent (with few-shot prompt)
+[x] 2.3 Doer agent (with few-shot prompt)
+[x] 2.4 Random baseline
 
 PHASE 3: EXPERIMENTS
 [ ] 3.1 Trial executor

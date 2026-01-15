@@ -1,0 +1,16 @@
+═══════════════════════════════════════════════════════════════════
+YOUR TURN - ENCODE THIS FUNCTION:
+
+Samples:
+  f(-2.0) = {y0}
+  f(-1.0) = {y1}
+  f(0.0) = {y2}
+  f(1.0) = {y3}
+  f(2.0) = {y4}
+
+Analyze the pattern. Which primitive(s) from the examples produce this?
+If it's a composition, remember: "X-Y" means apply Y first, then X.
+
+Think step by step, then provide your answer.
+
+MESSAGE:

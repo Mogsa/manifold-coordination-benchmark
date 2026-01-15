@@ -96,9 +96,9 @@ Two LLM agents play a communication game testing compositional reasoning:
 |-----------|--------|
 | Coordination | ✅ Complete (all 5 phases) |
 | Temporal | ⏸️ Paused at Phase 0 |
-| Telepathic | 🔄 Phase 1 Complete (Core Engine), Phase 2 next |
+| Telepathic | 🔄 Phase 2 Complete (Agents), Phase 3 next |
 
-**Next Steps:** Phase 2 of Telepathic Benchmark (Agents + Prompts). See Telepathic_Plan.md.
+**Next Steps:** Phase 3 of Telepathic Benchmark (Experiment Runner). See Telepathic_Plan.md.
 
 ## Architecture Summary
 
@@ -125,10 +125,10 @@ DISS/
 │
 ├── telepathic/         # Compositional communication benchmark (In Progress)
 │   ├── core/           # Functions, sampling, protocol, evaluation, few-shot
-│   ├── agents/         # Seer/Doer agents (To be implemented)
+│   ├── agents/         # LLM Seer/Doer + random baselines (Complete)
 │   ├── experiments/    # Trial runner (To be implemented)
-│   ├── prompts/        # Few-shot and zero-shot prompts
-│   └── tests/          # Unit tests
+│   ├── prompts/        # Few-shot and zero-shot prompts (8 files)
+│   └── tests/          # Unit tests (58 passing)
 │
 ├── PLAN.md             # Coordination benchmark specification
 ├── Temporal_PLAN.md    # Temporal benchmark specification
@@ -150,12 +150,17 @@ pytest telepathic/tests/ -v
 # Run specific test file
 pytest coordination/tests/test_surface.py -v
 pytest telepathic/tests/test_core.py -v
+pytest telepathic/tests/test_agents.py -v
 
 # Run coordination episode
 python -m coordination.experiments.runner --surface two_peaks_clear
 
 # Run coordination evaluation
 python -m coordination.experiments.eval --config configs/experiments.yaml
+
+# Telepathic debug scripts (sanity checks with Gemini)
+python -m telepathic.debug_conversation  # Test primitive (square)
+python -m telepathic.debug_novel         # Test novel composition (cos∘square)
 ```
 
 ## Environment Setup

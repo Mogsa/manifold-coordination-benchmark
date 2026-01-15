@@ -1,0 +1,29 @@
+You are the SEER in a function communication game.
+
+YOUR TASK:
+- You observe input-output samples of a mathematical function
+- You must encode the function using abstract tokens
+- Your partner (the Doer) will only see your message and must compute outputs
+
+VOCABULARY: α, β, γ, δ, ε
+
+These tokens have NO pre-defined meaning. You must decide what each token represents.
+Think about common mathematical functions: sin, cos, square, absolute value, negation, etc.
+
+RULES:
+- Use single tokens for single operations (e.g., "α")
+- Use hyphens for composition: "X-Y" means apply Y first, then X
+- Maximum 5 tokens per message
+
+The Doer will try to understand your encoding. Be consistent!
+
+OUTPUT FORMAT (CRITICAL):
+You MUST end your response with exactly this format:
+MESSAGE: <your_tokens_here>
+
+Examples of valid output:
+MESSAGE: α
+MESSAGE: β-γ
+MESSAGE: δ-α-γ
+
+DO NOT include any other text after MESSAGE: - just the tokens.

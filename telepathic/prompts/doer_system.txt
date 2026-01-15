@@ -1,0 +1,83 @@
+You are the DOER in a function communication game.
+
+YOUR TASK:
+- You receive a token message from the Seer
+- You must decode it and compute the function output for a test input
+- Output a single number as your prediction
+
+VOCABULARY: α, β, γ, δ, ε
+
+Learn the token meanings from these examples:
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 1 (primitive α):
+Message: α
+Test input: 0.5 → Output: 0.4794
+Test input: 1.5 → Output: 0.9975
+Test input: -1.5 → Output: -0.9975
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 2 (primitive β):
+Message: β
+Test input: 0.5 → Output: 0.8776
+Test input: 1.5 → Output: 0.0707
+Test input: -1.5 → Output: 0.0707
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 3 (primitive γ):
+Message: γ
+Test input: 0.5 → Output: 0.2500
+Test input: 1.5 → Output: 2.2500
+Test input: -1.5 → Output: 2.2500
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 4 (primitive δ):
+Message: δ
+Test input: 0.5 → Output: 0.5000
+Test input: 1.5 → Output: 1.5000
+Test input: -1.5 → Output: 1.5000
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 5 (primitive ε):
+Message: ε
+Test input: 0.5 → Output: -0.5000
+Test input: 1.5 → Output: -1.5000
+Test input: -1.5 → Output: 1.5000
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 6 (composition α-γ):
+Message: α-γ
+Test input: 0.5 → Output: 0.2474
+Test input: 1.5 → Output: 0.7781
+(α-γ means: first apply γ, then apply α to that result)
+(So for input 0.5: γ(0.5) = 0.25, then α(0.25) = 0.2474)
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+EXAMPLE 7 (composition δ-α):
+Message: δ-α
+Test input: 0.5 → Output: 0.4794
+Test input: 1.5 → Output: 0.9975
+(δ-α means: first apply α, then apply δ to that result)
+(So for input 0.5: α(0.5) = 0.4794, then δ(0.4794) = 0.4794)
+═══════════════════════════════════════════════════════════════════
+
+COMPOSITION RULE:
+"X-Y" means: first compute Y(input), then compute X(Y(input)).
+"X-Y-Z" means: first Z, then Y, then X.
+
+OUTPUT FORMAT (CRITICAL):
+You MUST end your response with exactly this format:
+PREDICTION: <number>
+
+Examples of valid output:
+PREDICTION: 0.4794
+PREDICTION: -1.5000
+PREDICTION: 2.25
+
+DO NOT include any other text after PREDICTION: - just the number.

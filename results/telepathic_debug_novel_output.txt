@@ -1,0 +1,115 @@
+/Users/morgan/Desktop/Year 3/Diss/DISS/venv/lib/python3.13/site-packages/pydantic/main.py:464: UserWarning: Pydantic serializer warnings:
+  PydanticSerializationUnexpectedValue(Expected 10 fields but got 7: Expected `Message` - serialized value may not be as expected [field_name='message', input_value=Message(content='MESSAGE:...er_specific_fields=None), input_type=Message])
+  PydanticSerializationUnexpectedValue(Expected `StreamingChoices` - serialized value may not be as expected [field_name='choices', input_value=Choices(finish_reason='st...r_specific_fields=None)), input_type=Choices])
+  return self.__pydantic_serializer__.to_python(
+/Users/morgan/Desktop/Year 3/Diss/DISS/venv/lib/python3.13/site-packages/pydantic/main.py:464: UserWarning: Pydantic serializer warnings:
+  PydanticSerializationUnexpectedValue(Expected 10 fields but got 7: Expected `Message` - serialized value may not be as expected [field_name='message', input_value=Message(content='PREDICTI...er_specific_fields=None), input_type=Message])
+  PydanticSerializationUnexpectedValue(Expected `StreamingChoices` - serialized value may not be as expected [field_name='choices', input_value=Choices(finish_reason='st...r_specific_fields=None)), input_type=Choices])
+  return self.__pydantic_serializer__.to_python(
+================================================================================
+TELEPATHIC DEBUG - NOVEL COMPOSITION (cos(x²))
+================================================================================
+
+[TEST SETUP]
+Function: cos(x²) = β-γ (NOVEL - not in few-shot!)
+Samples:
+  f(-2.0) = -0.6536
+  f(-1.0) = 0.5403
+  f(0.0) = 1.0000
+  f(1.0) = 0.5403
+  f(2.0) = -0.6536
+Test input: 1.5
+Expected output: -0.6282
+Expected token: β-γ
+
+================================================================================
+SEER CONVERSATION
+================================================================================
+
+--- SEER SYSTEM PROMPT (abbreviated) ---
+... [7 examples teaching α=sin, β=cos, γ=square, δ=abs, ε=neg] ...
+... [2 composition examples: α-γ=sin(x²), δ-α=|sin(x)|] ...
+
+--- SEER USER PROMPT ---
+═══════════════════════════════════════════════════════════════════
+YOUR TURN - ENCODE THIS FUNCTION:
+
+Samples:
+  f(-2.0) = -0.6536
+  f(-1.0) = 0.5403
+  f(0.0) = 1.0000
+  f(1.0) = 0.5403
+  f(2.0) = -0.6536
+
+Analyze the pattern. Which primitive(s) from the examples produce this?
+If it's a composition, remember: "X-Y" means apply Y first, then X.
+
+Think step by step, then provide your answer.
+
+MESSAGE:
+
+--- CALLING GEMINI FOR SEER ---
+
+--- SEER FULL RESPONSE ---
+MESSAGE: β
+
+--- EXTRACTED MESSAGE: β ---
+--- EXPECTED MESSAGE:  β-γ ---
+--- MATCH: NO ---
+
+================================================================================
+DOER CONVERSATION
+================================================================================
+
+--- DOER SYSTEM PROMPT (abbreviated) ---
+... [7 examples teaching how to decode tokens] ...
+
+--- DOER USER PROMPT ---
+═══════════════════════════════════════════════════════════════════
+YOUR TURN - DECODE AND COMPUTE:
+
+Message: β
+Test input: 1.5
+
+Decode the token(s) and compute the output.
+Remember: "X-Y" means apply Y first, then X.
+
+Think step by step, then provide your answer.
+
+PREDICTION:
+
+--- CALLING GEMINI FOR DOER ---
+
+--- DOER FULL RESPONSE ---
+PREDICTION: 0.0707
+
+--- EXTRACTED PREDICTION: 0.0707 ---
+
+================================================================================
+ANALYSIS
+================================================================================
+
+[SEER ANALYSIS]
+  Expected encoding: β-γ (cos ∘ square)
+  Actual encoding:   β
+  Seer's encoding means: cos
+  ERROR: Seer misidentified the function!
+
+[DOER ANALYSIS]
+  Received message: β
+  Test input: 1.5
+  Doer predicted: 0.0707
+  Expected output: -0.6282
+  Absolute error: 0.6989
+  Success: NO
+
+[ROOT CAUSE]
+  The Seer failed to identify cos(x²) from the samples.
+  This is a NOVEL composition - it was not in the few-shot examples.
+  The Seer had to GENERALIZE the composition rule to a new case.
+
+  Few-shot showed: α-γ (sin∘square), δ-α (abs∘sin)
+  Novel test:      β-γ (cos∘square)
+
+  This failure suggests the agent may have memorized the examples
+  rather than learning the general composition rule.
