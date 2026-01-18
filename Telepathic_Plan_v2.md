@@ -593,7 +593,7 @@ PROTOCOL:
 
       -- Fall back to beta reduction if pattern matching fails
       IF y_pred == UNRECOGNIZED:
-        y_pred = beta_reduce_evaluate(P, x_test, SCALE=100, timeout=10M)
+        y_pred = beta_reduce_evaluate(P, x_test, SCALE=1000, timeout=10M)
 
       IF y_pred == TIMEOUT_ERROR:
         RETURN Score = ∞
@@ -658,7 +658,7 @@ one of ~20 meaningful probe points in (0,1].
 |-----------|--------|-------|-------------|
 | Noise std dev | σ | 0.1 | Gaussian noise on probe samples |
 | Domain | (a, b] | (0, 1] | Input range (excludes 0 for log safety) |
-| **Scale factor** | **SCALE** | **100** | **Fixed-point scaling (resolution 0.01)** |
+| **Scale factor** | **SCALE** | **1000** | **Fixed-point scaling (resolution 0.001)** |
 | Error scale | k | 100 | Multiplier in error penalty |
 | Probe cost | C_probe | 5 bits | Cost per probe |
 | Timeout | T | 10,000,000 | Max beta reductions |
@@ -882,23 +882,23 @@ Lambda World                    Numerical World
 All numerical values are converted to integers via fixed-point scaling:
 
 ```
-SCALE = 100
+SCALE = 1000
 
-Input:  x = 0.35  →  x_int = 35
-Output: y = 0.1225 → y_int = 12 (rounded)
+Input:  x = 0.35  →  x_int = 350
+Output: y = 0.1225 → y_int = 123 (rounded)
 
-Resolution: 0.01 (two decimal places)
-Max value:  (0, 1] → (0, 100] as integers
+Resolution: 0.001 (three decimal places)
+Max value:  (0, 1] → (0, 1000] as integers
 ```
 
-**Why SCALE = 100?**
+**Why SCALE = 1000?**
 
 | Scale | Resolution | x² at x=1 | Church MUL cost | Timeout safe? |
 |-------|------------|-----------|-----------------|---------------|
 | 100   | 0.01       | 10,000    | ~10K reductions | ✓ Yes |
 | 1000  | 0.001      | 1,000,000 | ~1M reductions  | ✓ Yes |
 
-With domain (0, 1], even SCALE=1000 would be safe. We use SCALE=100 for simplicity and because 0.01 resolution is already 10× finer than the noise floor (σ = 0.1).
+With domain (0, 1], SCALE=1000 is safe (well under 10M timeout) and provides 0.001 resolution — 100× finer than the noise floor (σ = 0.1).
 
 ### 7.3 Two-Stage Evaluation
 
@@ -958,7 +958,7 @@ When the LLM invents novel structures we don't recognize, we fall back to direct
 
 ```python
 def evaluate_via_beta_reduction(program: LambdaTerm, x: float) -> float:
-    SCALE = 100
+    SCALE = 1000
 
     # 1. Scale float to integer
     x_int = round(x * SCALE)
@@ -1004,18 +1004,18 @@ The LLM must account for how scaling affects operations:
 
 | Operation | Input Scale | Output Scale | LLM Must Handle |
 |-----------|-------------|--------------|-----------------|
-| x | 100 | 100 | Nothing |
-| x + y | 100 | 100 | Nothing |
-| x × y | 100 | 10,000 | Divide by SCALE |
-| x² | 100 | 10,000 | Divide by SCALE |
-| x³ | 100 | 1,000,000 | Divide by SCALE² |
+| x | 1000 | 1000 | Nothing |
+| x + y | 1000 | 1000 | Nothing |
+| x × y | 1000 | 1,000,000 | Divide by SCALE |
+| x² | 1000 | 1,000,000 | Divide by SCALE |
+| x³ | 1000 | 1,000,000,000 | Divide by SCALE² |
 
 **Example for x²:**
 ```
 True: 0.5² = 0.25
-Scaled input: 50
-Naive: 50 × 50 = 2,500 (wrong scale!)
-Correct: 2,500 / 100 = 25 → 0.25 ✓
+Scaled input: 500
+Naive: 500 × 500 = 250,000 (wrong scale!)
+Correct: 250,000 / 1000 = 250 → 0.25 ✓
 ```
 
 The LLM must implement division by SCALE in their program, OR we normalize at the boundary (design choice - see Section 7.8).
@@ -1023,7 +1023,7 @@ The LLM must implement division by SCALE in their program, OR we normalize at th
 ### 7.8 Design Decision: Who Handles Scale Normalization?
 
 **Option A: LLM handles internally**
-- LLM knows SCALE = 100
+- LLM knows SCALE = 1000
 - LLM divides by SCALE after multiplication
 - More work for LLM, but "purer" test
 
@@ -1360,7 +1360,7 @@ TOTAL SCORE: TBD bits
 
 ---
 
-*Document version: 2.3*
+*Document version: 2.4*
 *Created: 2026-01-17*
-*Updated: 2026-01-18 — Domain changed to (0, 1], expected scores marked TBD, added Section 7 (Numerical Evaluation Pipeline)*
+*Updated: 2026-01-18 — SCALE=1000 (0.001 resolution), domain (0, 1], expected scores TBD, Section 7 (Numerical Evaluation Pipeline)*
 *Status: SPECIFICATION - Ready for Implementation*
