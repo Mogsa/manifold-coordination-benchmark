@@ -35,39 +35,119 @@
 
 Can LLM agents **compress and transmit algorithmic rules** through a bandwidth-constrained channel, and does success require genuine compositional reasoning rather than memorization?
 
-### 1.2 Core Concept
+### 1.2 Core Concept: Agentic Fluidity
 
-Two LLM agents play a **communication game** where one must transmit a mathematical function to the other using only abstract tokens:
+Two LLM agents play a **communication game** testing whether they can CREATE and LEARN a compositional language:
 
-- **The Seer** observes input-output samples of an unknown function f(x)
-- **The Doer** receives only abstract tokens (no samples) and a test input
-- **The Constraint** forces compression: bandwidth << information content
-- **Success** requires transmitting the *algorithm*, not memorizing mappings
+- **The Seer** invents a language mapping functions to abstract tokens, then teaches it to the Doer
+- **The Doer** learns the language from demonstrations (no natural language), then applies it
+- **The Constraint** forces genuine communication: NO natural language allowed, only tokens + numbers
+- **Success** requires the Seer to CREATE a compositional grammar and the Doer to LEARN and GENERALIZE it
 
-### 1.2.1 Two Experimental Conditions
+### 1.2.1 The "Agentic Fluidity" Hypothesis
 
-The benchmark runs **two conditions** to isolate the effect of vocabulary grounding:
-
-| Condition | What agents see | Research question |
-|-----------|-----------------|-------------------|
-| **Few-shot** | 7 examples teaching token meanings | "Can they GENERALIZE from examples?" |
-| **Zero-shot** | NO examples, just task description | "Can they INVENT a shared protocol?" |
-
-**Few-shot condition:**
-- Both agents receive identical examples in their prompts
-- Examples teach token→function mappings and composition syntax
-- Tests compositional **generalization**
-
-**Zero-shot condition:**
-- Agents receive only task description and vocabulary
-- Must invent their own meaning for tokens
-- Tests emergent **communication**
+**The Core Insight:** Current AI benchmarks test Fluid Reasoning in isolation (single-agent puzzles) and Communication in isolation (multi-agent English chat). **Agentic Fluidity** is the intersection: inducing a novel abstract concept AND inventing a protocol to transmit it.
 
 ```
-The key comparison:
-├── Φ_few-shot = compositional generalization ability
-├── Φ_zero-shot = emergent protocol invention ability
-└── Δ = Φ_few-shot - Φ_zero-shot = effect of explicit grounding
+┌─────────────────────────────────────────────────────────────────┐
+│                    AGENTIC FLUIDITY                             │
+│                                                                 │
+│   True fluid intelligence occurs when agents face a phenomenon  │
+│   for which NO WORD EXISTS in their training data.              │
+│                                                                 │
+│   The Seer must:                                                │
+│   1. Recognize the function from samples                        │
+│   2. INVENT a token encoding (α = sin, β = cos, ...)            │
+│   3. TEACH this encoding to the Doer WITHOUT natural language   │
+│                                                                 │
+│   The Doer must:                                                │
+│   1. LEARN token meanings from pure demonstration               │
+│   2. GENERALIZE to compositions never explicitly shown          │
+│                                                                 │
+│   If they succeed, they haven't just solved a puzzle—           │
+│   they have ALIGNED THEIR LATENT SPACES to create a shared,     │
+│   ad-hoc language.                                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 1.2.2 Two-Level Generalization Test
+
+```
+LEVEL 1: Seer generalizes "how to make language"
+├── Meta-trained with example language (x, y, z)
+├── Must CREATE new language with (α, β, γ, δ, ε)
+├── Must design TEACHABLE, COMPOSITIONAL encodings
+└── Tests: Can LLMs do meta-learning for language creation?
+
+LEVEL 2: Doer generalizes the invented language
+├── Learns primitives α, β, γ from demonstrations
+├── Tested on compositions (e.g., α-γ) never explicitly shown
+└── Tests: Can LLMs learn compositional grammar from examples?
+```
+
+### 1.2.3 The Critical Constraint: NO Natural Language
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 COMMUNICATION CONSTRAINTS                        │
+│                                                                 │
+│   ALLOWED:                                                      │
+│   ├── Abstract tokens: α, β, γ, δ, ε                            │
+│   ├── Numbers: 0, 1, 2, -0.84, 0.91, etc.                       │
+│   ├── Structural symbols: → | - (for composition)               │
+│   └── Line breaks / spacing                                     │
+│                                                                 │
+│   NOT ALLOWED:                                                  │
+│   ├── Words: "means", "apply", "first", "example", "rule"       │
+│   ├── Any natural language explanation                          │
+│   └── Meta-commentary about the protocol                        │
+│                                                                 │
+│   This forces PURE DEMONSTRATION, not explanation.              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 1.2.4 How Numbers Ground Abstract Tokens
+
+The abstract tokens (α, β, γ) have **no inherent meaning**. Numbers provide the GROUNDING that makes them meaningful:
+
+```
+WITHOUT NUMBERS:
+┌─────────────────────────┐
+│ α                       │  → Doer: "α could mean anything.
+│                         │          I have no idea."
+└─────────────────────────┘
+
+WITH NUMBERS:
+┌─────────────────────────┐
+│ α                       │  → Doer: "When input is 0, output is 0.
+│ 0 → 0                   │          When input is 1, output is 0.84.
+│ 1 → 0.84                │          This pattern looks like sin(x)!
+│ 2 → 0.91                │          So α must mean sin."
+└─────────────────────────┘
+
+The numbers ARE the meaning. They show what the function DOES.
+```
+
+**Analogy:** Teaching "red" to an alien without shared language:
+- Just saying "red" = meaningless sound
+- Pointing at red apple, red fire truck, red blood = grounding through demonstration
+
+**For composition:**
+```
+Seer teaches:
+  α: 0→0, 1→0.84, 2→0.91        (Doer infers: α = sin)
+  γ: 0→0, 1→1, 2→4              (Doer infers: γ = square)
+  α-γ: 1→0.84                   (Doer sees ONE example)
+
+Doer reasons:
+  "α-γ at input 1 gives 0.84
+   If I apply γ first: γ(1) = 1
+   Then apply α: α(1) = 0.84 ✓
+   So α-γ means: apply γ, then α!"
+
+The numbers let Doer VERIFY their hypothesis about composition order.
 ```
 
 ### 1.3 The "Shannon Barrier" Principle
@@ -420,7 +500,96 @@ doer_observation = {
 
 ## 5. Episode Structure
 
-### 5.1 Single Trial Flow
+### 5.1 Complete Episode Flow (4 Steps)
+
+The episode structure reflects the "Agentic Fluidity" design where the Seer INVENTS a language and TEACHES it to the Doer through pure demonstration.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              STEP 0: META-TRAINING (Seer only)                  │
+│                                                                 │
+│  The Seer learns HOW to create language from an example.        │
+│  This happens via the system prompt — NOT during the episode.   │
+│                                                                 │
+│  System prompt shows:                                           │
+│    - Example language using (x, y, z) tokens                    │
+│    - How to demonstrate primitives with input→output pairs      │
+│    - How to demonstrate compositions                            │
+│                                                                 │
+│  The Seer must GENERALIZE to create a NEW language              │
+│  using (α, β, γ, δ, ε) tokens.                                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│          STEP 1: LANGUAGE CREATION (Seer decides)               │
+│                                                                 │
+│  The Seer decides what each token means:                        │
+│    - Seer sees samples of each primitive function               │
+│    - Seer assigns tokens: α=?, β=?, γ=?, δ=?, ε=?               │
+│                                                                 │
+│  CONSTRAINT: Seer must be CONSISTENT across the episode.        │
+│  Once α is assigned to sin, it must always mean sin.            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│            STEP 2: TEACHING PHASE (Seer → Doer)                 │
+│                                                                 │
+│  The Seer teaches token meanings to the Doer.                   │
+│                                                                 │
+│  CRITICAL CONSTRAINT: NO NATURAL LANGUAGE                       │
+│  Seer can ONLY send:                                            │
+│    - Tokens: α, β, γ, δ, ε                                      │
+│    - Numbers: 0, 1, 2, -0.84, 0.91, etc.                        │
+│    - Structural symbols: → | -                                  │
+│                                                                 │
+│  Example teaching message (for α = sin):                        │
+│  ┌─────────────────────────────────────────┐                    │
+│  │ α                                       │                    │
+│  │ 0 → 0                                   │                    │
+│  │ 1 → 0.84                                │                    │
+│  │ 2 → 0.91                                │                    │
+│  └─────────────────────────────────────────┘                    │
+│                                                                 │
+│  Doer must INFER: "α means sin(x)"                              │
+│                                                                 │
+│  Seer also teaches composition rule with ONE example:           │
+│  ┌─────────────────────────────────────────┐                    │
+│  │ α-γ                                     │                    │
+│  │ 1 → 0.84                                │                    │
+│  └─────────────────────────────────────────┘                    │
+│                                                                 │
+│  Doer must VERIFY: "α-γ at 1: γ(1)=1, α(1)=0.84 ✓"              │
+│  Doer learns: "X-Y means apply Y first, then X"                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│            STEP 3: TESTING PHASE (novel compositions)           │
+│                                                                 │
+│  Now we test whether the Doer learned COMPOSITIONAL GRAMMAR.    │
+│                                                                 │
+│  For each test trial:                                           │
+│    1. Seer observes samples of a composition (e.g., β-γ)        │
+│    2. Seer sends message: "β-γ"                                 │
+│    3. Doer receives message + test input x                      │
+│    4. Doer computes: γ(x), then β(γ(x))                         │
+│    5. Evaluation: compare to expected                           │
+│                                                                 │
+│  KEY: β-γ was NEVER explicitly taught!                          │
+│  Doer must GENERALIZE the composition rule.                     │
+│                                                                 │
+│  Success here = learned compositional grammar                   │
+│  Failure here = only memorized taught examples                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 Single Trial Flow (Within Testing Phase)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -432,11 +601,13 @@ doer_observation = {
 │     - Select test point: x_test                                 │
 │                                                                 │
 │  2. SEER PHASE                                                  │
-│     - Seer receives: samples + vocabulary                       │
+│     - Seer receives: samples                                    │
 │     - Seer outputs: message m (≤5 tokens)                       │
+│     - NO natural language, only: tokens + numbers + symbols     │
 │                                                                 │
 │  3. DOER PHASE                                                  │
 │     - Doer receives: message m + test input x_test              │
+│     - Doer decodes using learned token meanings                 │
 │     - Doer outputs: predicted y_pred                            │
 │                                                                 │
 │  4. EVALUATION                                                  │
@@ -446,60 +617,81 @@ doer_observation = {
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 Curriculum Phases (Updated for Few-Shot Grounding)
+### 5.3 Curriculum Phases (Agentic Fluidity Design)
 
-**Key Change:** Phase 2 (Trained Compositions) is REMOVED because compositions
-shown in few-shot examples are already in the system prompt — testing them
-would just measure "can you copy what you read?" which is trivially easy.
-
-The curriculum now has **3 phases**:
+The curriculum tests TWO levels of generalization:
+1. **Level 1:** Seer generalizes "how to make language" (meta-learning)
+2. **Level 2:** Doer generalizes the invented language (compositional grammar)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│              PHASE 1: PRIMITIVE VERIFICATION                    │
+│     TEACHING PHASE: PRIMITIVE DEMONSTRATION (5 functions)       │
 │                                                                 │
-│  Goal: Verify agents learned primitives from few-shot examples  │
-│  Functions: The 5 primitives shown in few-shot (α,β,γ,δ,ε)      │
-│  Trials: 15 (3 per primitive × 5 primitives)                    │
+│  Goal: Seer teaches Doer the 5 primitive token meanings         │
+│  Communication: ONLY tokens + numbers + structural symbols      │
 │                                                                 │
-│  Few-shot taught:                                               │
-│    - α = sin(x)                                                 │
-│    - β = cos(x)                                                 │
-│    - γ = x² (square)                                            │
-│    - δ = |x| (abs)                                              │
-│    - ε = -x (neg)                                               │
+│  For each primitive:                                            │
+│    - Seer receives samples of the function                      │
+│    - Seer sends: token + (input→output) demonstrations          │
+│    - Doer receives and must INFER the function                  │
 │                                                                 │
-│  Measure: Accuracy (expected: HIGH, since examples were given)  │
+│  Example teaching sequence:                                     │
+│    α | 0→0 | 1→0.84 | 2→0.91                                    │
+│    β | 0→1 | 1→0.54 | 2→-0.42                                   │
+│    γ | 0→0 | 1→1 | 2→4                                          │
+│    δ | -1→1 | 0→0 | 1→1                                         │
+│    ε | 1→-1 | 2→-2                                              │
+│                                                                 │
+│  Measure: Can Doer correctly predict unseen (x, f(x)) pairs?    │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│     PHASE 2: NOVEL COMPOSITIONS  ══════ THE KEY TEST ══════     │
+│   TEACHING PHASE: COMPOSITION RULE (1-2 examples only)          │
+│                                                                 │
+│  Goal: Teach the "X-Y" composition syntax                       │
+│  Communication: ONLY tokens + numbers + structural symbols      │
+│                                                                 │
+│  Seer sends ONE composition example:                            │
+│    α-γ | 1→0.84                                                 │
+│                                                                 │
+│  Doer must reason:                                              │
+│    "α-γ at x=1 gives 0.84                                       │
+│     If γ(1)=1 and α(1)=0.84...                                  │
+│     Then α-γ means: apply γ first, then α!"                     │
+│                                                                 │
+│  This is the ONLY composition shown. All others are held out.   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│     TEST PHASE: NOVEL COMPOSITIONS  ══════ THE KEY TEST ══════  │
 │                                                                 │
 │  Goal: Test compositional GENERALIZATION                        │
-│  Functions: Depth-2 compositions NOT shown in few-shot          │
-│  Trials: 18 (all pairs of {α,β,γ,δ,ε} minus 2 shown in few-shot)│
+│  Functions: Compositions NEVER explicitly demonstrated          │
+│  Trials: 18 novel compositions                                  │
 │                                                                 │
-│  Few-shot showed: α-γ (sin∘square), δ-α (abs∘sin)               │
-│  Test compositions (18 novel combinations):                     │
-│    - α-β, α-δ, α-ε    (sin with cos, abs, neg)                  │
+│  Taught: α-γ (ONE composition example)                          │
+│  Tested (18 novel combinations):                                │
+│    - α-β, α-δ, α-ε                                              │
 │    - β-α, β-γ, β-δ, β-ε                                         │
 │    - γ-α, γ-β, γ-δ, γ-ε                                         │
-│    - δ-β, δ-γ, δ-ε                                              │
+│    - δ-α, δ-β, δ-γ, δ-ε                                         │
 │    - ε-α, ε-β, ε-γ, ε-δ                                         │
 │                                                                 │
 │  Measure: Φ = accuracy_novel / accuracy_primitive               │
 │                                                                 │
 │  Interpretation:                                                │
-│    Φ ≈ 1.0 → Compositional grammar (learned the RULE)           │
-│    Φ ≈ 0.0 → Memorized few-shot examples only                   │
+│    Φ ≈ 1.0 → Learned compositional grammar (THE RULE)           │
+│    Φ ≈ 0.0 → Only memorized the one taught example              │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│            PHASE 3: INCOMPRESSIBLE CONTROLS                     │
+│            TEST PHASE: INCOMPRESSIBLE CONTROLS                  │
 │                                                                 │
 │  Goal: Sanity check — agents SHOULD fail here                   │
 │  Functions: Random mappings with no short description           │
@@ -518,14 +710,15 @@ The curriculum now has **3 phases**:
 **MVP Trial Summary:**
 | Phase | Trials | Purpose |
 |-------|--------|---------|
-| Phase 1: Primitives | 15 | Verify few-shot learning worked |
-| Phase 2: Novel Compositions | 18 | **THE KEY TEST** — measures Φ |
-| Phase 3: Incompressible | 5 | Sanity check |
-| **Total** | **38** | |
+| Teaching: Primitives | 5 | Seer teaches 5 tokens via demonstration |
+| Teaching: Composition | 1 | Seer teaches composition rule with ONE example |
+| Test: Novel Compositions | 18 | **THE KEY TEST** — measures Φ |
+| Test: Incompressible | 5 | Sanity check |
+| **Total** | **29** | |
 
-### 5.3 Composition Hold-Out Strategy (Few-Shot Version)
+### 5.4 Composition Hold-Out Strategy
 
-With few-shot grounding, the hold-out is defined by what's in the few-shot examples:
+With the teaching phase, the hold-out is defined by what's demonstrated:
 
 ```python
 # MVP: Only 5 primitives (those shown in few-shot)
@@ -573,35 +766,82 @@ TEST_COMPOSITIONS = [
 
 ## 6. Communication Protocol
 
-### 6.1 Token Vocabulary
+### 6.1 The Critical Constraint: NO NATURAL LANGUAGE
 
-```python
-# Full vocabulary (10 tokens)
-VOCABULARY = ["α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ"]
-
-# MVP: Only 5 tokens are used (those shown in few-shot)
-MVP_TOKEN_MAPPING = {
-    "α": "sin",      # Shown in few-shot
-    "β": "cos",      # Shown in few-shot
-    "γ": "square",   # Shown in few-shot
-    "δ": "abs",      # Shown in few-shot
-    "ε": "neg",      # Shown in few-shot
-}
-
-# Future extension: These 5 are NOT shown in few-shot
-HELD_OUT_TOKEN_MAPPING = {
-    "ζ": "sqrt",     # NOT in few-shot
-    "η": "exp",      # NOT in few-shot
-    "θ": "log",      # NOT in few-shot
-    "ι": "relu",     # NOT in few-shot
-    "κ": "sign",     # NOT in few-shot
-}
-
-# Token meanings are TAUGHT via few-shot examples in the system prompt
-# Agents do NOT invent meanings — they learn from examples
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 COMMUNICATION CONSTRAINTS                        │
+│                                                                 │
+│   ALLOWED in Seer→Doer messages:                                │
+│   ├── Abstract tokens: α, β, γ, δ, ε                            │
+│   ├── Numbers: 0, 1, 2, -0.84, 0.91, 3.14, etc.                 │
+│   ├── Structural symbols: → | - (for composition)               │
+│   └── Line breaks / spacing                                     │
+│                                                                 │
+│   NOT ALLOWED:                                                  │
+│   ├── Words: "means", "apply", "first", "example", "rule"       │
+│   ├── Labels: "sin", "cos", "square" (function names)           │
+│   ├── Any natural language explanation                          │
+│   └── Meta-commentary about the protocol                        │
+│                                                                 │
+│   WHY: This forces PURE DEMONSTRATION, not explanation.         │
+│   The Doer must INFER meaning from patterns in numbers.         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Message Format
+### 6.2 Token Vocabulary
+
+```python
+# MVP vocabulary (5 tokens)
+VOCABULARY = ["α", "β", "γ", "δ", "ε"]
+
+# IMPORTANT: Token meanings are NOT pre-defined!
+# The Seer INVENTS what each token means and TEACHES it to the Doer.
+# The Seer could assign:
+#   α = sin, β = cos, γ = square, δ = abs, ε = neg
+# OR:
+#   α = square, β = abs, γ = sin, δ = neg, ε = cos
+# Any consistent assignment is valid!
+
+# For evaluation purposes, we track what assignment the Seer chose.
+```
+
+### 6.3 Teaching Message Format
+
+During the teaching phase, Seer sends messages like:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  TEACHING A PRIMITIVE (e.g., sin)                               │
+│                                                                 │
+│  α                                                              │
+│  0 → 0                                                          │
+│  1 → 0.84                                                       │
+│  2 → 0.91                                                       │
+│                                                                 │
+│  Doer receives this and must INFER: "α means sin(x)"            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  TEACHING A COMPOSITION (e.g., sin ∘ square)                    │
+│                                                                 │
+│  α-γ                                                            │
+│  1 → 0.84                                                       │
+│                                                                 │
+│  Doer receives this and must VERIFY:                            │
+│    "α-γ at x=1 gives 0.84                                       │
+│     If I try γ first: γ(1) = 1                                  │
+│     Then α: α(1) = 0.84 ✓                                       │
+│     So α-γ means apply γ first, then α!"                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 6.4 Test Message Format
+
+During the test phase, Seer sends compact messages:
 
 ```python
 # Single primitive: one token
@@ -615,7 +855,7 @@ message = "α-β-γ"    # Meaning: α ∘ β ∘ γ
 max_tokens = 5
 ```
 
-### 6.3 Composition Semantics
+### 6.5 Composition Semantics
 
 **Right-to-left application** (standard mathematical convention):
 
@@ -624,24 +864,58 @@ max_tokens = 5
 # So for input x: apply β first, then α
 # (α ∘ β)(x) = α(β(x))
 
-# Example: if α=sin, β=square
+# Example: if Seer assigned α=sin, β=square
 # Message "α-β" for input x=2:
 # β(2) = 4
 # α(4) = sin(4) ≈ -0.757
 ```
 
-### 6.4 Bandwidth Constraint
+### 6.6 Bandwidth Constraint
 
 ```
 Maximum message length: 5 tokens
-Information per token:  log₂(10) ≈ 3.32 bits
-Maximum information:    5 × 3.32 ≈ 16.6 bits
+Information per token:  log₂(5) ≈ 2.32 bits (MVP vocabulary)
+Maximum information:    5 × 2.32 ≈ 11.6 bits
 
 Compare to raw data:
   5 samples × 2 floats × 32 bits = 320 bits
-  Compression ratio: 320 / 16.6 ≈ 19×
+  Compression ratio: 320 / 11.6 ≈ 28×
 
 This forces genuine compression — cannot transmit raw samples.
+```
+
+### 6.7 Protocol Validation
+
+```python
+def validate_teaching_message(message: str) -> bool:
+    """
+    Validate a teaching message conforms to no-natural-language constraint.
+
+    Allowed characters:
+    - Greek letters: α, β, γ, δ, ε
+    - Digits and decimal: 0-9, .
+    - Signs: -, +
+    - Arrow: →
+    - Pipe: |
+    - Whitespace: space, newline
+
+    NOT allowed:
+    - Letters a-z, A-Z
+    - Words of any kind
+    """
+    import re
+
+    # Pattern: only allowed characters
+    allowed_pattern = r'^[αβγδε0-9\.\-\+→\|\s]+$'
+
+    if not re.match(allowed_pattern, message):
+        return False
+
+    # Additional check: no sequences that look like words
+    if re.search(r'[a-zA-Z]{2,}', message):
+        return False
+
+    return True
 ```
 
 ---
@@ -2337,7 +2611,7 @@ Allow agents to learn over multiple episodes:
 
 ---
 
-*Document version: 2.1*
+*Document version: 3.0*
 *Created: 2026-01-14*
-*Updated: 2026-01-14 (Added few-shot grounding + zero-shot condition)*
-*Status: READY FOR IMPLEMENTATION (MVP with both conditions)*
+*Updated: 2026-01-17 (Agentic Fluidity redesign: Seer invents & teaches language, no natural language constraint)*
+*Status: SPECIFICATION UPDATED - Implementation requires agent redesign*
