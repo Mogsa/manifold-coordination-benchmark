@@ -76,13 +76,18 @@ Two LLM agents jointly control a single "player" navigating a 2D surface f(x,y) 
 - Agent B controls y-coordinate, sees vertical slices
 - Neither can see the full surface — communication is necessary
 
-### Temporal Benchmark (Paused)
-A single LLM agent navigates a 1D surface f(x,t) that evolves over time:
-- Agent controls x-position, sees local slices + gradients
-- Surface changes according to hidden dynamics (peaks move, grow, shrink)
-- Agent must learn patterns and predict future states
+### Telepathic Benchmark v2 (Active Priority)
+**Single-agent compression benchmark testing Kolmogorov complexity approximation:**
+- Agent observes noisy function samples via active probing
+- Must synthesize a pure λ-calculus program computing the function
+- Agent has FULL FREEDOM over encoding (Church numerals, binary lists, custom)
+- Program compiled to Binary Lambda Calculus (BLC) for objective scoring
+- **Score = program bits + error penalty + probe penalty** (lower is better)
+- Tests: Can LLMs compress → demonstrating structural understanding?
 
-### Telepathic Benchmark (In Progress)
+See `Telepathic_Plan_v2.md` for full specification.
+
+### Telepathic Benchmark v1 (Paused)
 Two LLM agents play a communication game testing compositional reasoning:
 - **Seer** observes input-output samples of a function, encodes it as abstract tokens
 - **Doer** receives only the token message, must compute output for new inputs
@@ -90,15 +95,26 @@ Two LLM agents play a communication game testing compositional reasoning:
 - **Key metric: Φ** = accuracy on novel compositions / accuracy on primitives
 - Tests whether LLMs learn compositional grammar vs. lookup tables
 
+*Status: Phases 1-2 complete (core + agents). May be finished later.*
+
+### Temporal Benchmark (Paused)
+A single LLM agent navigates a 1D surface f(x,t) that evolves over time:
+- Agent controls x-position, sees local slices + gradients
+- Surface changes according to hidden dynamics (peaks move, grow, shrink)
+- Agent must learn patterns and predict future states
+
+*Status: Phase 0 complete (repository restructure). May be finished later.*
+
 ## Current Status
 
-| Benchmark | Status |
-|-----------|--------|
-| Coordination | ✅ Complete (all 5 phases) |
-| Temporal | ⏸️ Paused at Phase 0 |
-| Telepathic | 🔄 Phase 2 Complete (Agents), Phase 3 next |
+| Benchmark | Status | Plan File |
+|-----------|--------|-----------|
+| Coordination | ✅ Complete (all 5 phases) | `PLAN.md` |
+| **Telepathic v2** | 🎯 **Active Priority** — Implementation starting | `Telepathic_Plan_v2.md` |
+| Telepathic v1 | ⏸️ Paused (Phases 1-2 done) | `Telepathic_Plan.md` |
+| Temporal | ⏸️ Paused (Phase 0 done) | `Temporal_PLAN.md` |
 
-**Next Steps:** Phase 3 of Telepathic Benchmark (Experiment Runner). See Telepathic_Plan.md.
+**Next Steps:** Implement Telepathic v2 starting with Phase 1 (Lambda Calculus Infrastructure). See `Telepathic_Plan_v2.md` Section 10 for checkpoints.
 
 ## Architecture Summary
 
@@ -123,16 +139,19 @@ DISS/
 │   ├── agents/         # (To be implemented)
 │   └── ...
 │
-├── telepathic/         # Compositional communication benchmark (In Progress)
-│   ├── core/           # Functions, sampling, protocol, evaluation, few-shot
-│   ├── agents/         # LLM Seer/Doer + random baselines (Complete)
-│   ├── experiments/    # Trial runner (To be implemented)
-│   ├── prompts/        # Few-shot and zero-shot prompts (8 files)
-│   └── tests/          # Unit tests (58 passing)
+├── telepathic/         # Telepathic benchmarks (v1 paused, v2 active)
+│   ├── core/           # v1: Functions, sampling, protocol, evaluation, few-shot
+│   │                   # v2: Will add lambda_parser, blc_compiler, blc_interpreter
+│   ├── agents/         # v1: LLM Seer/Doer + random baselines (Complete)
+│   │                   # v2: Will add compression agent
+│   ├── experiments/    # Trial runner (To be implemented for v2)
+│   ├── prompts/        # Agent prompts
+│   └── tests/          # Unit tests
 │
 ├── PLAN.md             # Coordination benchmark specification
 ├── Temporal_PLAN.md    # Temporal benchmark specification
-└── Telepathic_Plan.md  # Telepathic benchmark specification
+├── Telepathic_Plan.md  # Telepathic v1 specification (Seer/Doer two-agent)
+└── Telepathic_Plan_v2.md  # Telepathic v2 specification (BLC compression) ← ACTIVE
 ```
 
 ## Development Commands
@@ -158,9 +177,14 @@ python -m coordination.experiments.runner --surface two_peaks_clear
 # Run coordination evaluation
 python -m coordination.experiments.eval --config configs/experiments.yaml
 
-# Telepathic debug scripts (sanity checks with Gemini)
+# Telepathic v1 debug scripts (sanity checks with Gemini)
 python -m telepathic.debug_conversation  # Test primitive (square)
 python -m telepathic.debug_novel         # Test novel composition (cos∘square)
+
+# Telepathic v2 (once implemented)
+# pytest telepathic/tests/test_lambda_parser.py -v
+# pytest telepathic/tests/test_blc_compiler.py -v
+# pytest telepathic/tests/test_blc_interpreter.py -v
 ```
 
 ## Environment Setup
@@ -197,7 +221,20 @@ pytest --version  # Should show pytest 9.0.2
 | Mode | Function mode (batch 20 positions per run) |
 | Scoring | Cumulative reward / optimal reward |
 
-### Telepathic Benchmark
+### Telepathic Benchmark v2 (Active)
+| Decision | Choice |
+|----------|--------|
+| Agent freedom | Agent chooses own encoding (Church numerals, binary lists, custom) |
+| Input syntax | Pure λ-calculus via Python lambda (no +, *, if, etc.) |
+| Compilation target | Binary Lambda Calculus (BLC) |
+| Domain | (0, 1] — excludes 0 for log safety |
+| Scale factor | SCALE=1000 (resolution 0.001) |
+| Noise | Gaussian σ=0.1 on probe samples |
+| Scoring | `bits + Σlog₂(1+|error|×100) + probes×5` |
+| Timeout | 10M β-reductions |
+| Test set | 20 held-out points (uniform, no noise) |
+
+### Telepathic Benchmark v1 (Paused)
 | Decision | Choice |
 |----------|--------|
 | Primitives | 5 MVP: sin(α), cos(β), square(γ), abs(δ), neg(ε) |
@@ -209,9 +246,14 @@ pytest --version  # Should show pytest 9.0.2
 
 ## Workflow
 
-**For Coordination:** See PLAN.md for checkpoint details.
+**Current Priority: Telepathic v2** — See `Telepathic_Plan_v2.md` Section 10 for checkpoints.
 
-**For Temporal:** See Temporal_PLAN.md for checkpoint details.
+**Paused benchmarks (may resume later):**
+- Telepathic v1: See `Telepathic_Plan.md`
+- Temporal: See `Temporal_PLAN.md`
+- Coordination: Complete — See `PLAN.md`
+
+### Implementation Steps
 
 1. Read the checkpoint requirements in the relevant PLAN.md
 2. Read the API specification for the component
@@ -220,3 +262,13 @@ pytest --version  # Should show pytest 9.0.2
 5. Run tests: `pytest <module>/tests/test_<file>.py -v`
 6. Mark checkpoint complete in PLAN.md Appendix
 7. Commit with checkpoint reference
+
+### Telepathic v2 Phases
+
+| Phase | Focus | Key Components |
+|-------|-------|----------------|
+| 1 | Lambda Calculus Infrastructure | Parser, De Bruijn, BLC compiler/interpreter |
+| 2 | Benchmark Environment | Function library, noisy sampling, probing interface |
+| 3 | Scoring & Evaluation | Bit counting, error penalty, total score |
+| 4 | Agents | Base interface, baselines (random, memorization, oracle), LLM agent |
+| 5 | Experiments & Analysis | Runner, logging, visualization |

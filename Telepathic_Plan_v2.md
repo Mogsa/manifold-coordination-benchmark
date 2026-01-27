@@ -556,9 +556,17 @@ AGENT'S GOAL:
 ```
 PROTOCOL:
 
-  Agent outputs: A pure λ-calculus program P
+  Agent outputs a STRUCTURED RESPONSE with two parts:
 
-  REQUIREMENTS:
+  1. REASONING (for research analysis):
+     - What pattern did the agent identify from the samples?
+     - What encoding strategy did they choose and why?
+     - What mathematical approach (Taylor series, polynomial fit, etc.)?
+     - Any tradeoffs considered (accuracy vs program size)?
+
+  2. PROGRAM: A pure λ-calculus program P
+
+  REQUIREMENTS FOR PROGRAM:
     - P must be valid λ-calculus syntax (Python lambda only)
     - P must compile to BLC without error
     - P must terminate within timeout on all test inputs
@@ -569,9 +577,28 @@ PROTOCOL:
     - How to implement arithmetic
     - How to approximate the function
 
+  OUTPUT FORMAT (JSON):
+    {
+      "reasoning": "I observed that y ≈ x² based on the probe samples...
+                    Choosing Church numerals for simplicity...
+                    Using MUL(x)(x) for squaring...",
+      "program": "MUL = lambda m: lambda n: lambda f: m(n(f))\nSQUARE = lambda x: MUL(x)(x)"
+    }
+
   CLAIM:
     "P computes (approximately) the function f"
 ```
+
+**Why capture reasoning?**
+
+| Research Value | What It Reveals |
+|----------------|-----------------|
+| Pattern recognition | How does the LLM identify structure from noisy data? |
+| Engineering choices | Does it understand encoding tradeoffs (Church vs binary)? |
+| Mathematical insight | Can it derive approximations (Taylor series) from samples? |
+| MDL intuition | Does it reason about compression vs accuracy tradeoffs? |
+
+This is NOT scored — it's for dissertation analysis of the agent's thought process.
 
 ### 4.4 Phase 3: Evaluation
 
@@ -1122,16 +1149,24 @@ telepathic/
 ### 9.2 Key Interfaces
 
 ```python
+from dataclasses import dataclass
+
+# Synthesis Result (includes reasoning for research analysis)
+@dataclass
+class SynthesisResult:
+    reasoning: str   # Agent's thought process (for dissertation analysis)
+    program: str     # Pure λ-calculus program
+
 # Agent Interface
 class Agent(ABC):
     @abstractmethod
     def probe(self, environment: Environment) -> None:
-        """Interactive probing phase."""
+        """Interactive probing phase. Agent decides when to stop."""
         pass
 
     @abstractmethod
-    def synthesize(self) -> str:
-        """Return λ-calculus program as string."""
+    def synthesize(self) -> SynthesisResult:
+        """Return reasoning + λ-calculus program."""
         pass
 
 # Environment Interface
@@ -1139,7 +1174,7 @@ class Environment:
     def __init__(self, function: Callable, noise_std: float = 0.1):
         self.f = function
         self.noise_std = noise_std
-        self.probes = []
+        self.probes = []  # List of (x, y) tuples
 
     def probe(self, x: float) -> float:
         """Return noisy sample at x."""
@@ -1147,16 +1182,35 @@ class Environment:
         self.probes.append((x, y))
         return y
 
+# Score Result
+@dataclass
+class Score:
+    compression_bits: int    # |P|_BLC
+    error_penalty: float     # Σ log₂(1 + |e| × 100)
+    probe_penalty: int       # n_probes × 5
+    total: float             # Sum of above (lower is better)
+
+    # For analysis (not part of score)
+    errors: list[float]      # Individual test point errors
+    reasoning: str           # Agent's reasoning (preserved for research)
+
 # Scorer Interface
-def score(program: str, environment: Environment) -> Score:
-    """Compute total score for a program."""
-    blc = compile_to_blc(parse(program))
+def score(result: SynthesisResult, environment: Environment) -> Score:
+    """Compute total score for a synthesis result."""
+    blc = compile_to_blc(parse(result.program))
     errors = evaluate_on_test_set(blc, environment.f)
 
+    compression_bits = len(blc)
+    error_penalty = sum(log2(1 + e * 100) for e in errors)
+    probe_penalty = len(environment.probes) * 5
+
     return Score(
-        compression_bits=len(blc),
-        error_penalty=sum(log2(1 + e * 100) for e in errors),
-        probe_penalty=len(environment.probes) * 5,
+        compression_bits=compression_bits,
+        error_penalty=error_penalty,
+        probe_penalty=probe_penalty,
+        total=compression_bits + error_penalty + probe_penalty,
+        errors=errors,
+        reasoning=result.reasoning,
     )
 ```
 
@@ -1186,16 +1240,18 @@ def score(program: str, environment: Environment) -> Score:
 - [ ] **3.2** Error penalty computation
 - [ ] **3.3** Probe penalty computation
 - [ ] **3.4** Total score aggregation
-- [ ] **3.5** Score dataclass and reporting
+- [ ] **3.5** Score dataclass (includes reasoning for research analysis)
+- [ ] **3.6** Result reporting and export
 
 ### Phase 4: Agents
 
-- [ ] **4.1** Abstract agent interface
-- [ ] **4.2** Random baseline agent
-- [ ] **4.3** Memorization baseline agent
-- [ ] **4.4** Oracle baseline agent
-- [ ] **4.5** LLM agent implementation
-- [ ] **4.6** Agent prompts
+- [ ] **4.1** SynthesisResult dataclass (reasoning + program)
+- [ ] **4.2** Abstract agent interface (probe + synthesize → SynthesisResult)
+- [ ] **4.3** Random baseline agent
+- [ ] **4.4** Memorization baseline agent
+- [ ] **4.5** Oracle baseline agent
+- [ ] **4.6** LLM agent implementation (with JSON output parsing)
+- [ ] **4.7** Agent prompts (must request reasoning + program in JSON format)
 
 ### Phase 5: Experiments & Analysis
 
@@ -1216,8 +1272,11 @@ class RandomAgent(Agent):
         for _ in range(10):
             env.probe(random.uniform(0.01, 1.0))
 
-    def synthesize(self):
-        return "lambda x: x"  # Always returns identity
+    def synthesize(self) -> SynthesisResult:
+        return SynthesisResult(
+            reasoning="No analysis performed. Returning identity function.",
+            program="lambda x: x"
+        )
 ```
 
 **Expected**: Very high score (poor accuracy)
@@ -1226,10 +1285,11 @@ class RandomAgent(Agent):
 
 ```python
 class MemorizationAgent(Agent):
-    def synthesize(self):
-        # Build huge lookup table
-        # IF x=0.5 THEN 0.48 ELSE IF x=1.0 THEN 0.85 ELSE ...
-        return self.build_lookup_table()
+    def synthesize(self) -> SynthesisResult:
+        return SynthesisResult(
+            reasoning="Memorizing all probe samples as lookup table.",
+            program=self.build_lookup_table()  # Huge λ-calculus IF chain
+        )
 ```
 
 **Expected**: ∞ (fails on held-out test points)
@@ -1241,9 +1301,11 @@ class OracleAgent(Agent):
     def __init__(self, true_function_name):
         self.name = true_function_name
 
-    def synthesize(self):
-        # Return optimal program for known function
-        return OPTIMAL_PROGRAMS[self.name]
+    def synthesize(self) -> SynthesisResult:
+        return SynthesisResult(
+            reasoning=f"Oracle knows true function is {self.name}.",
+            program=OPTIMAL_PROGRAMS[self.name]
+        )
 ```
 
 **Expected**: Best possible score (lower bound)
