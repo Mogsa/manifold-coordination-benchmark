@@ -39,3 +39,6 @@ results/*/
 # macOS
 .DS_Store
 .env
+
+# Ralph automation (local only)
+.ralph/
