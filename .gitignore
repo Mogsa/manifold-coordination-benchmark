@@ -42,3 +42,12 @@ results/*/
 
 # Ralph automation (local only)
 .ralph/
+
+# ChaosBench generated plots
+phi_curves.png
+nll_vs_difficulty.png
+accuracy_by_difficulty.png
+weighting_comparison.png
+conditional_comparison.png
+observability_analysis.png
+complexity_spectrum.png
