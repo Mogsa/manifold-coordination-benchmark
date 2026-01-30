@@ -280,25 +280,14 @@ For a single task:
 
 ```python
 nll = -log(prob[true_bin])  # Negative log-likelihood
-accuracy = exp(-nll / h_ks)  # Normalized by complexity
+accuracy = exp(-nll)         # Probability-based accuracy
 score = w(h_ks) * accuracy   # Weighted by difficulty
 ```
 
-**Rationale for normalization by h_KS**:
-- High-entropy systems have irreducible uncertainty
-- Even an oracle (knowing true parameters) cannot achieve NLL = 0
-- Normalizing by h_KS makes scores comparable across systems
-
-### 6.3 Known Issue: Double-Weighting
-
-The current formula applies difficulty twice:
-1. In the accuracy normalization: exp(-NLL / h_KS)
-2. In the weighting: w(h_KS)
-
-**This may need revision.** Options:
-- Remove normalization: score = w(h_KS) × (1 if correct else 0)
-- Remove weighting: score = exp(-NLL / h_KS)
-- Keep both but justify the interaction
+**Design rationale**:
+- NLL captures how well the solver predicted the true outcome
+- Difficulty is captured via w(h_KS) weighting, not in the accuracy term
+- This avoids double-weighting that previously crushed scores for hard tasks
 
 ### 6.4 Binary Accuracy (Secondary Metric)
 
@@ -519,34 +508,28 @@ Mandatory completion + h_KS weighting prevents this.
 
 ## 11. Known Limitations and Open Problems
 
-### 11.1 h_KS Values Are Approximate
+### 11.1 h_KS Computation
 
-**Current state**: h_KS values are hand-tuned approximations:
+~~**Previous state**: h_KS values were hand-tuned approximations.~~
 
-```python
-h_ks = 0.42 * (a / 1.4)  # Hénon: "roughly scales with a"
-```
+**FIXED (v3.1)**: h_KS is now computed rigorously via Lyapunov exponents:
+- 1D maps: Direct computation via `compute_lyapunov_1d()`
+- 2D maps: QR method via `compute_lyapunov_spectrum()`
+- Continuous flows (Lorenz): Integration method via `compute_lyapunov_continuous()`
 
-**Required fix**: Either:
-1. Compute h_KS properly via QR method for Lyapunov spectrum
-2. Use only 1D maps where h_KS = λ_max is exactly computable
-3. Use published values from dynamical systems literature
+Systems with h_KS < 0.1 are filtered out to exclude non-chaotic parameter regimes.
 
-**Impact**: Without correct h_KS, difficulty weighting and normalization are meaningless.
+### 11.2 Prediction Horizon Scaling
 
-### 11.2 Prediction Horizon May Be Too Long
+~~**Previous state**: Fixed horizon = 10 steps.~~
 
-**Current state**: Fixed horizon = 10 steps.
-
-**Problem**: For systems with h_KS ≈ 0.7, the Lyapunov time τ_λ ≈ 1.4 steps. A horizon of 10 steps is **7 Lyapunov times**—prediction is essentially impossible.
-
-**Required fix**: Scale horizon by Lyapunov time:
+**FIXED (v3.1)**: Horizon now scales with Lyapunov time:
 
 ```python
-horizon = int(k * system.lyapunov_time)  # k ∈ [0.5, 2]
+horizon = int(horizon_lyapunov_multiplier * system.lyapunov_time)  # default k=1.5
 ```
 
-**Impact**: Currently measuring "how well can you approximate the invariant measure?" not "how well can you track trajectories?"
+This makes prediction horizons ~1.5 Lyapunov times ahead—challenging but feasible.
 
 ### 11.3 ConditionalSolver Doesn't Do Conditional Prediction
 
@@ -568,15 +551,11 @@ return discretize(x)
 
 **Impact**: Cannot test "does family knowledge help?" until this is fixed.
 
-### 11.4 Scoring Formula Double-Weights Difficulty
+### 11.4 Scoring Formula
 
-**Current state**: Score = w(h_KS) × exp(-NLL / h_KS)
+~~**Previous state**: Score = w(h_KS) × exp(-NLL / h_KS) — double-weighted difficulty.~~
 
-**Problem**: h_KS appears twice—in the weighting and in the normalization.
-
-**Required decision**: Choose one:
-- w(h_KS) × accuracy (where accuracy = 𝟙[correct])
-- exp(-NLL / h_KS) alone
+**FIXED (v3.1)**: Score = w(h_KS) × exp(-NLL). Difficulty is captured once via the weighting function, not twice.
 
 ### 11.5 Multi-Agent Protocol Not Implemented
 
@@ -617,8 +596,10 @@ This would establish an information-theoretic ceiling. Likely provable via rate-
 
 | Component | Status | Priority |
 |-----------|--------|----------|
-| Correct h_KS values | ❌ Approximate | CRITICAL |
-| Horizon scaling | ❌ Fixed | CRITICAL |
+| Correct h_KS values | ✅ Computed via Lyapunov | DONE |
+| Horizon scaling | ✅ k × lyapunov_time | DONE |
+| Filter non-chaotic systems | ✅ min_h_ks threshold | DONE |
+| Scoring formula | ✅ No double-weighting | DONE |
 | Proper conditional solver | ❌ Fake | HIGH |
 | Observation cost | ⚠️ Implemented but untested | MEDIUM |
 | Multi-agent protocol | ❌ Not started | MEDIUM |
