@@ -2,11 +2,6 @@
 
 import pytest
 import numpy as np
-import sys
-import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from chaosbench.core.Chaosbench_v3 import (
     TaskConfig,
@@ -49,6 +44,19 @@ class TestHorizonScaling:
         # Lower chaos system should have longer horizon
         assert task_low.future_time >= task_high.future_time
 
+    def test_minimum_horizon_guarantee(self):
+        """Horizon should be at least 1 even for very high chaos systems."""
+        # Use very small multiplier to test the max(1, ...) safeguard
+        config = TaskConfig(horizon_lyapunov_multiplier=0.1)
+        generator = TaskGenerator(config, seed=42)
+
+        # High chaos system with short Lyapunov time
+        system = LogisticMap(r=4.0)  # lyapunov_time ~ 1.44, 0.1 * 1.44 = 0.144 -> rounds to 0
+        task = generator.generate_task(system=system)
+
+        # Should be at least 1, not 0
+        assert task.future_time >= 1, f"Horizon {task.future_time} should be at least 1"
+
 
 class TestSystemFiltering:
     """Test that non-chaotic systems are filtered out."""
@@ -70,6 +78,14 @@ class TestSystemFiltering:
         # Should have systems from all families
         families = set(s.family for s in generator.all_systems)
         assert len(families) == 5  # logistic, tent, henon, standard, lorenz
+
+    def test_error_when_all_systems_filtered(self):
+        """Should raise ValueError if threshold filters out all systems."""
+        # h_KS values max out around 1.1, so threshold of 10 should filter everything
+        config = TaskConfig(min_h_ks=10.0)
+
+        with pytest.raises(ValueError, match="No systems with h_KS"):
+            TaskGenerator(config, seed=42)
 
 
 class TestScoringFormula:
