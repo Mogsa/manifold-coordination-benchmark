@@ -37,6 +37,28 @@ class AgentAction:
     params: dict | None = None  # For HYPOTHESIZE
 
 
+@dataclass
+class BacktestFeedback:
+    """Feedback from testing a hypothesis."""
+    model: str
+    params: dict
+    mae: float
+    predicted_next: float
+
+    def format(self) -> str:
+        """Format as human-readable feedback."""
+        params_str = ", ".join(f"{k}={v}" for k, v in self.params.items())
+        quality = "fits well" if self.mae < 0.05 else "doesn't reproduce the observations well"
+
+        return f"""Model: {self.model} ({params_str})
+
+Backtest (fitting x_0 → x_49):
+  MAE: {self.mae:.3f}
+  Your model {quality}.
+
+If you trust this model, it predicts x_50 = {self.predicted_next:.4f}"""
+
+
 def parse_action(response: str) -> AgentAction:
     """Parse an AgentAction from LLM response.
 

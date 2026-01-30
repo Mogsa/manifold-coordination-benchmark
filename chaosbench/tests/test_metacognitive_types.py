@@ -6,6 +6,7 @@ from chaosbench.agents.metacognitive_types import (
     AgentObservation,
     AgentAction,
     parse_action,
+    BacktestFeedback,
 )
 
 
@@ -112,3 +113,32 @@ class TestParseHypothesisActions:
 
         assert action.action == "FIT"
         assert action.model == "tent"
+
+
+class TestBacktestFeedback:
+    def test_format_good_fit(self):
+        """Format feedback for good fit."""
+        fb = BacktestFeedback(
+            model="logistic",
+            params={"r": 3.9},
+            mae=0.02,
+            predicted_next=0.156,
+        )
+        text = fb.format()
+
+        assert "logistic" in text
+        assert "r=3.9" in text or "r: 3.9" in text
+        assert "0.02" in text
+        assert "0.156" in text
+
+    def test_format_poor_fit(self):
+        """Format feedback for poor fit."""
+        fb = BacktestFeedback(
+            model="logistic",
+            params={"r": 3.5},
+            mae=0.25,
+            predicted_next=0.42,
+        )
+        text = fb.format()
+
+        assert "doesn't reproduce" in text.lower() or "poor" in text.lower()
