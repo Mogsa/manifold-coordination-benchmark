@@ -14,7 +14,9 @@ from chaosbench.agents.metacognitive_types import (
     AgentObservation,
     AgentAction,
     Feedback,
+    BacktestFeedback,
 )
+from chaosbench.core.backtest import backtest_model
 from chaosbench.agents.learnings import LearningsManager
 from chaosbench.experiments.trace import TraceLogger
 
@@ -149,6 +151,21 @@ class SessionRunner:
                 elif action.action == "DELETE":
                     self.learnings.delete(action.section)
                     self.trace.log_turn(reasoning, action, feedback=None)
+
+                elif action.action == "HYPOTHESIZE":
+                    # Test the hypothesis against observations
+                    result = backtest_model(
+                        action.model,
+                        action.params,
+                        task.observations.flatten(),
+                    )
+                    backtest_fb = BacktestFeedback(
+                        model=action.model,
+                        params=action.params,
+                        mae=result.mae,
+                        predicted_next=result.predicted_next,
+                    )
+                    self.trace.log_turn(reasoning, action, feedback=None, backtest=backtest_fb)
 
                 elif action.action == "MOVE_ON":
                     # NOW we score the last prediction and reveal the answer

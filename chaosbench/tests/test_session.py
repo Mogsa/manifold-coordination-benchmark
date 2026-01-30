@@ -105,3 +105,42 @@ class TestSessionRunner:
             result = runner.run(agent)
 
         assert "Logistic maps are chaotic" in result.final_learnings
+
+
+class TestHypothesizeHandler:
+    def test_hypothesize_returns_backtest(self):
+        """HYPOTHESIZE should return backtest feedback."""
+        # Agent hypothesizes, then predicts based on result
+        agent = MockAgent([
+            AgentAction(action="HYPOTHESIZE", model="logistic", params={"r": 3.9}),
+            AgentAction(action="PREDICT", value=0.5),
+            AgentAction(action="MOVE_ON"),
+        ])
+
+        config = SessionConfig(n_tasks=1, timeout_seconds=60)
+        runner = SessionRunner(config)
+
+        with patch.object(runner, '_generate_tasks') as mock_gen:
+            # Generate actual logistic data
+            r = 3.9
+            obs = np.zeros(50)
+            obs[0] = 0.3
+            for i in range(1, 50):
+                obs[i] = r * obs[i-1] * (1 - obs[i-1])
+
+            mock_task = Mock()
+            mock_task.task_id = 1
+            mock_task.system.family = "logistic"
+            mock_task.h_ks = 0.5
+            mock_task.observations = obs
+            mock_task.obs_times = np.arange(50)
+            mock_task.future_time = 1
+            mock_task.true_future = np.array([r * obs[-1] * (1 - obs[-1])])
+            mock_gen.return_value = [mock_task]
+
+            result = runner.run(agent)
+
+        assert result.tasks_completed == 1
+        # Check trace includes HYPOTHESIZE
+        trace_md = result.trace.to_markdown()
+        assert "HYPOTHESIZE" in trace_md

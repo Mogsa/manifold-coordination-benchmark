@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 import time
 
-from chaosbench.agents.metacognitive_types import AgentAction, Feedback
+from chaosbench.agents.metacognitive_types import AgentAction, Feedback, BacktestFeedback
 
 
 @dataclass
@@ -14,6 +14,7 @@ class Turn:
     action: AgentAction
     feedback: Optional[Feedback]
     timestamp: float
+    backtest: Optional[BacktestFeedback] = None
 
 
 @dataclass
@@ -58,6 +59,7 @@ class TraceLogger:
         reasoning: str,
         action: AgentAction,
         feedback: Optional[Feedback] = None,
+        backtest: Optional[BacktestFeedback] = None,
     ) -> None:
         if self.current_task is None:
             raise RuntimeError("No active task")
@@ -68,6 +70,7 @@ class TraceLogger:
             action=action,
             feedback=feedback,
             timestamp=time.time(),
+            backtest=backtest,
         )
         self.current_task.turns.append(turn)
 
@@ -98,6 +101,10 @@ class TraceLogger:
 
                 if turn.feedback:
                     lines.append(f"**Feedback:** pred={turn.feedback.prediction:.3f}, actual={turn.feedback.actual:.3f}, score={turn.feedback.score:.2f}\n")
+
+                if turn.backtest:
+                    params_str = ", ".join(f"{k}={v}" for k, v in turn.backtest.params.items())
+                    lines.append(f"**Backtest:** model={turn.backtest.model}({params_str}), MAE={turn.backtest.mae:.4f}, predicted_next={turn.backtest.predicted_next:.4f}\n")
 
             lines.append("---\n")
 
