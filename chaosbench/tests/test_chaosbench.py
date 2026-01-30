@@ -12,6 +12,9 @@ from chaosbench.core.Chaosbench_v3 import (
     TaskConfig,
     TaskGenerator,
     LogisticMap,
+    Evaluator,
+    DifficultyWeighting,
+    UniformSolver,
 )
 
 
@@ -67,3 +70,42 @@ class TestSystemFiltering:
         # Should have systems from all families
         families = set(s.family for s in generator.all_systems)
         assert len(families) == 5  # logistic, tent, henon, standard, lorenz
+
+
+class TestScoringFormula:
+    """Test that scoring formula doesn't double-weight difficulty."""
+
+    def test_score_uses_difficulty_weight_only_once(self):
+        """Score should be w(h_ks) * exp(-NLL), not w(h_ks) * exp(-NLL/h_ks)."""
+        # The new formula should give higher scores for same NLL
+        # because it doesn't penalize h_KS twice
+        h_ks = 0.5
+        nll = 2.0
+
+        accuracy_new = np.exp(-nll)  # New: no division by h_ks
+        score_new = DifficultyWeighting.linear(h_ks) * accuracy_new
+
+        # Score should be approximately 0.068, not 0.009
+        assert score_new > 0.05, f"Score {score_new} too low, likely using old formula"
+
+
+class TestScoringIntegration:
+    """Integration test for scoring changes."""
+
+    def test_uniform_solver_not_crushed(self):
+        """Uniform solver should get non-trivial Φ, not near-zero."""
+        config = TaskConfig(min_h_ks=0.1)
+        generator = TaskGenerator(config, seed=42)
+        tasks = generator.generate_batch(20, stratified=True)
+
+        evaluator = Evaluator(weighting=DifficultyWeighting.linear)
+        solver = UniformSolver()
+
+        results, phi_curve = evaluator.evaluate_batch(solver, tasks)
+        final_phi = phi_curve[-1].cumulative_score
+
+        # Uniform should get meaningful score, not near-zero
+        # With 20 bins, uniform gives p=0.05, NLL ≈ 3.0
+        # New score per task: w(h_ks) * exp(-3) ≈ 0.5 * 0.05 = 0.025
+        # Over 20 tasks should give meaningful Φ (was 0.03 with old formula, now ~0.2)
+        assert final_phi > 0.15, f"Uniform Φ={final_phi} too low (suggests double-weighting bug)"

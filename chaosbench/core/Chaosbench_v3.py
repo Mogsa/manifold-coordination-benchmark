@@ -849,8 +849,8 @@ class Evaluator:
             results.append(result)
             
             # Score: weighted accuracy minus observation cost
-            # Accuracy from NLL: exp(-NLL / h_KS) normalized
-            accuracy = np.exp(-result.nll / max(result.h_ks, 0.1))
+            # Accuracy from NLL: exp(-NLL) — difficulty already captured by weighting
+            accuracy = np.exp(-result.nll)
             task_score = self.weighting(result.h_ks) * accuracy
             
             # Subtract observation cost
