@@ -42,8 +42,9 @@ Predict future states from observations. Output JSON actions."""
         if obs.family:
             lines.append(f"**System family:** {obs.family}")
 
-        # Format observations compactly
-        obs_str = ", ".join(f"{x:.3f}" for x in obs.observations[:10])
+        # Format observations compactly (flatten for 2D arrays from ChaosBench)
+        flat_obs = obs.observations.flatten()[:10]
+        obs_str = ", ".join(f"{x:.3f}" for x in flat_obs)
         if len(obs.observations) > 10:
             obs_str += f", ... ({len(obs.observations)} total)"
         lines.append(f"**Observations:** [{obs_str}]")
