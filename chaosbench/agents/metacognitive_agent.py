@@ -15,9 +15,9 @@ class MetacognitiveAgent:
 
     def __init__(
         self,
-        model: str = "gemini/gemini-2.0-flash",
+        model: str = "gemini/gemini-3-flash-preview",
         temperature: float = 0.7,
-        max_tokens: int = 1000,
+        max_tokens: int = 4000,
     ):
         self.model = model
         self.temperature = temperature

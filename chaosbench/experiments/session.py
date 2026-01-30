@@ -121,15 +121,14 @@ class SessionRunner:
                 h_ks=task.h_ks,
             )
 
-            last_feedback = None
-            last_score = 0.0
+            last_prediction = None  # Store prediction, don't reveal answer
             turn_count = 0
 
             while turn_count < self.config.max_turns_per_task:
                 turn_count += 1
 
-                # Build observation
-                obs = self._build_observation(task, last_feedback)
+                # Build observation (no feedback until MOVE_ON)
+                obs = self._build_observation(task, last_feedback=None)
 
                 # Get agent response
                 reasoning, action = agent(obs)
@@ -138,26 +137,59 @@ class SessionRunner:
                 feedback = None
 
                 if action.action == "PREDICT":
-                    score, actual = self._compute_score(action.value, task)
-                    last_score = score
-                    feedback = Feedback(
-                        prediction=action.value,
-                        actual=actual,
-                        score=score,
-                    )
-                    last_feedback = feedback
+                    # Just record the prediction, don't compute or reveal score yet
+                    last_prediction = action.value
+                    # Log turn with no feedback (agent doesn't see answer)
+                    self.trace.log_turn(reasoning, action, feedback=None)
 
                 elif action.action == "WRITE":
                     self.learnings.write(action.text)
+                    self.trace.log_turn(reasoning, action, feedback=None)
 
                 elif action.action == "DELETE":
                     self.learnings.delete(action.section)
+                    self.trace.log_turn(reasoning, action, feedback=None)
 
                 elif action.action == "MOVE_ON":
+                    # NOW we score the last prediction and reveal the answer
+                    if last_prediction is not None:
+                        last_score, actual = self._compute_score(last_prediction, task)
+                        feedback = Feedback(
+                            prediction=last_prediction,
+                            actual=actual,
+                            score=last_score,
+                        )
+                    else:
+                        last_score = 0.0
+                        actual = None
+                        feedback = None
                     self.trace.log_turn(reasoning, action, feedback)
+
+                    # REFLECTION PHASE: Let agent see result and write learnings
+                    if feedback is not None:
+                        reflection_turns = 0
+                        while reflection_turns < 3:  # Max 3 reflection turns
+                            reflection_turns += 1
+                            # Show result to agent
+                            obs = self._build_observation(task, last_feedback=feedback)
+                            reasoning, action = agent(obs)
+
+                            if action.action == "WRITE":
+                                self.learnings.write(action.text)
+                                self.trace.log_turn(reasoning, action, feedback=None)
+                            elif action.action == "DELETE":
+                                self.learnings.delete(action.section)
+                                self.trace.log_turn(reasoning, action, feedback=None)
+                            else:
+                                # Any other action (PREDICT, MOVE_ON) ends reflection
+                                break
                     break
 
-                self.trace.log_turn(reasoning, action, feedback)
+            # Compute final score (in case agent hit turn limit without MOVE_ON)
+            if last_prediction is not None and 'last_score' not in dir():
+                last_score, _ = self._compute_score(last_prediction, task)
+            elif last_prediction is None:
+                last_score = 0.0
 
             # Bank score
             weighted_score = self.config.weighting(task.h_ks) * last_score

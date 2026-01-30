@@ -6,6 +6,12 @@ supporting 100+ LLM providers (OpenAI, Anthropic, Google, etc.).
 """
 
 import os
+from pathlib import Path
+
+# Load .env file from project root
+from dotenv import load_dotenv
+_project_root = Path(__file__).parent.parent
+load_dotenv(_project_root / ".env")
 import re
 import time
 from typing import List, Dict, Optional, Callable

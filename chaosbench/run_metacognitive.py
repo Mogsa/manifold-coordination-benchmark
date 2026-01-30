@@ -10,7 +10,7 @@ from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
 
 def main():
     parser = argparse.ArgumentParser(description="Run metacognitive agent on ChaosBench")
-    parser.add_argument("--model", default="gemini/gemini-2.0-flash", help="LLM model to use")
+    parser.add_argument("--model", default="gemini/gemini-3-flash-preview", help="LLM model to use")
     parser.add_argument("--n-tasks", type=int, default=10, help="Number of tasks")
     parser.add_argument("--timeout", type=int, default=300, help="Session timeout in seconds")
     parser.add_argument("--output", default="session_output", help="Output directory")
