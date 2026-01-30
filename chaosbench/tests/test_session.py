@@ -144,3 +144,39 @@ class TestHypothesizeHandler:
         # Check trace includes HYPOTHESIZE
         trace_md = result.trace.to_markdown()
         assert "HYPOTHESIZE" in trace_md
+
+
+class TestFitHandler:
+    def test_fit_returns_params(self):
+        """FIT should return fitted parameters."""
+        agent = MockAgent([
+            AgentAction(action="FIT", model="logistic"),
+            AgentAction(action="PREDICT", value=0.5),
+            AgentAction(action="MOVE_ON"),
+        ])
+
+        config = SessionConfig(n_tasks=1, timeout_seconds=60)
+        runner = SessionRunner(config)
+
+        with patch.object(runner, '_generate_tasks') as mock_gen:
+            r = 3.85
+            obs = np.zeros(50)
+            obs[0] = 0.3
+            for i in range(1, 50):
+                obs[i] = r * obs[i-1] * (1 - obs[i-1])
+
+            mock_task = Mock()
+            mock_task.task_id = 1
+            mock_task.system.family = "logistic"
+            mock_task.h_ks = 0.5
+            mock_task.observations = obs
+            mock_task.obs_times = np.arange(50)
+            mock_task.future_time = 1
+            mock_task.true_future = np.array([r * obs[-1] * (1 - obs[-1])])
+            mock_gen.return_value = [mock_task]
+
+            result = runner.run(agent)
+
+        assert result.tasks_completed == 1
+        trace_md = result.trace.to_markdown()
+        assert "FIT" in trace_md
