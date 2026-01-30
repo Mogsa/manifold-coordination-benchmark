@@ -1219,7 +1219,13 @@ def main():
     print("=" * 60)
     print("ChaosBench v3: Information-Efficient Chaotic Prediction")
     print("=" * 60)
-    
+
+    # Use new defaults: scaled horizon, filtered systems
+    config = TaskConfig(
+        horizon_lyapunov_multiplier=1.5,  # ~1.5 Lyapunov times
+        min_h_ks=0.1,  # Filter non-chaotic systems
+    )
+
     # Create solvers
     solvers = [
         UniformSolver(),
@@ -1230,10 +1236,10 @@ def main():
         NearestNeighborSolver(),
         ConditionalSolver(),
     ]
-    
-    # Run benchmark
+
+    # Run benchmark with explicit config
     print("\n1. Running main benchmark...")
-    all_results, tasks = run_benchmark(solvers, n_tasks=100)
+    all_results, tasks = run_benchmark(solvers, n_tasks=100, config=config)
     
     # Generate plots
     print("\n2. Generating visualizations...")
