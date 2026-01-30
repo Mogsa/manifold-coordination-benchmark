@@ -24,6 +24,7 @@ class AgentObservation:
     family: str | None
     learnings: str
     last_feedback: Feedback | None
+    last_backtest: "BacktestFeedback | None" = None
 
 
 @dataclass

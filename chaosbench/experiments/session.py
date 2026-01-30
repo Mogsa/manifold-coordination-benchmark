@@ -88,6 +88,7 @@ class SessionRunner:
         self,
         task: Task,
         last_feedback: Optional[Feedback],
+        last_backtest: Optional[BacktestFeedback] = None,
     ) -> AgentObservation:
         """Build observation for the agent."""
         return AgentObservation(
@@ -98,6 +99,7 @@ class SessionRunner:
             family=task.system.family if self.config.conditional else None,
             learnings=self.learnings.content,
             last_feedback=last_feedback,
+            last_backtest=last_backtest,
         )
 
     def run(self, agent: Callable) -> SessionResult:
@@ -125,13 +127,14 @@ class SessionRunner:
             )
 
             last_prediction = None  # Store prediction, don't reveal answer
+            last_backtest = None  # Store backtest feedback for next turn
             turn_count = 0
 
             while turn_count < self.config.max_turns_per_task:
                 turn_count += 1
 
-                # Build observation (no feedback until MOVE_ON)
-                obs = self._build_observation(task, last_feedback=None)
+                # Build observation (no feedback until MOVE_ON, but include backtest)
+                obs = self._build_observation(task, last_feedback=None, last_backtest=last_backtest)
 
                 # Get agent response
                 reasoning, action = agent(obs)
@@ -166,6 +169,7 @@ class SessionRunner:
                         mae=result.mae,
                         predicted_next=result.predicted_next,
                     )
+                    last_backtest = backtest_fb  # Pass to agent next turn
                     self.trace.log_turn(reasoning, action, feedback=None, backtest=backtest_fb)
 
                 elif action.action == "FIT":
@@ -177,6 +181,7 @@ class SessionRunner:
                         mae=result.mae,
                         predicted_next=result.predicted_next,
                     )
+                    last_backtest = backtest_fb  # Pass to agent next turn
                     self.trace.log_turn(reasoning, action, feedback=None, backtest=backtest_fb)
 
                 elif action.action == "MOVE_ON":
