@@ -398,10 +398,11 @@ class TaskConfig:
     """Configuration for task generation."""
     n_obs: int = 50  # Number of observations available
     obs_density: float = 1.0  # Fraction of timesteps observed (1.0 = all)
-    horizon: int = 10  # How far ahead to predict
+    horizon_lyapunov_multiplier: float = 1.5  # Horizon = k * lyapunov_time
     noise_std: float = 0.01  # Observation noise
     n_bins: int = 20  # Discretization resolution
     conditional: bool = True  # Reveal system family?
+    min_h_ks: float = 0.1  # Minimum h_KS to include system (filters non-chaotic)
 
 
 class TaskGenerator:
@@ -418,43 +419,46 @@ class TaskGenerator:
         """Generate a single task."""
         if system is None:
             system = self.rng.choice(self.all_systems)
-        
+
+        # Compute horizon from Lyapunov time
+        horizon = max(1, int(self.config.horizon_lyapunov_multiplier * system.lyapunov_time))
+
         # Get appropriate bounds for discretization
         bounds = self._get_bounds(system)
         discretizer = DiscretizedSpace(system.dim, self.config.n_bins, bounds)
-        
+
         # Generate trajectory
         x0 = self._get_initial_condition(system)
         n_available = int(self.config.n_obs / self.config.obs_density)
-        total_steps = n_available + self.config.horizon + 200  # Buffer + burn-in
+        total_steps = n_available + horizon + 200  # Buffer + burn-in
         traj = system.trajectory(x0, total_steps)
-        
+
         # Burn-in to reach attractor
         burn_in = 100
         traj = traj[burn_in:]
-        
+
         # Select observation times (with possible sparsity)
         obs_indices = self.rng.choice(n_available, size=self.config.n_obs, replace=False)
         obs_indices = np.sort(obs_indices)
-        
+
         # Get observations with noise
-        observations = traj[obs_indices] + self.rng.normal(0, self.config.noise_std, 
+        observations = traj[obs_indices] + self.rng.normal(0, self.config.noise_std,
                                                            (self.config.n_obs, system.dim))
-        
+
         # Get true future state
-        future_idx = n_available + self.config.horizon
+        future_idx = n_available + horizon
         true_future = traj[future_idx]
         true_bin = discretizer.state_to_bin(true_future)
-        
+
         self.task_counter += 1
-        
+
         return Task(
             task_id=self.task_counter,
             system=system,
             observations=observations,
             obs_times=obs_indices,
             true_future=true_future,
-            future_time=self.config.horizon,
+            future_time=horizon,  # Now computed dynamically
             h_ks=system.h_ks,
             discretizer=discretizer,
             true_bin=true_bin,
