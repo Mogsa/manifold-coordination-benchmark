@@ -36,12 +36,14 @@ def backtest_model(
 
     # One-step predictions: predict x_{i+1} from x_i
     errors = []
-    for i in range(len(obs) - 1):
-        x_i = obs[i:i+1] if model.dim == 1 else obs[i]
+    dim = model.dim
+    n_steps = len(obs) // dim - 1
+    for i in range(n_steps):
+        x_i = obs[i*dim:(i+1)*dim]
         predicted = model.step(x_i)
-        # step() returns ndarray, extract scalar
+        # step() returns ndarray, extract first component
         predicted = float(predicted.flat[0])
-        actual = float(obs[i + 1])
+        actual = float(obs[(i + 1) * dim])
         errors.append(abs(predicted - actual))
 
     mae = float(np.mean(errors))
