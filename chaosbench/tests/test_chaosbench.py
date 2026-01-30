@@ -45,3 +45,25 @@ class TestHorizonScaling:
 
         # Lower chaos system should have longer horizon
         assert task_low.future_time >= task_high.future_time
+
+
+class TestSystemFiltering:
+    """Test that non-chaotic systems are filtered out."""
+
+    def test_filters_low_h_ks_systems(self):
+        """Systems with h_KS below threshold should be excluded."""
+        config = TaskConfig(min_h_ks=0.1)
+        generator = TaskGenerator(config, seed=42)
+
+        # All systems should have h_KS >= 0.1
+        for system in generator.all_systems:
+            assert system.h_ks >= 0.1, f"{system.name} has h_KS={system.h_ks}"
+
+    def test_zero_threshold_includes_all(self):
+        """With min_h_ks=0, all systems should be included."""
+        config = TaskConfig(min_h_ks=0.0)
+        generator = TaskGenerator(config, seed=42)
+
+        # Should have systems from all families
+        families = set(s.family for s in generator.all_systems)
+        assert len(families) == 5  # logistic, tent, henon, standard, lorenz

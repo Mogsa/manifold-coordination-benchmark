@@ -407,12 +407,22 @@ class TaskConfig:
 
 class TaskGenerator:
     """Generate prediction tasks from chaotic systems."""
-    
+
     def __init__(self, config: TaskConfig, seed: int = 42):
         self.config = config
         self.rng = np.random.default_rng(seed)
         self.families = create_system_family()
-        self.all_systems = [s for fam in self.families.values() for s in fam]
+
+        # Filter out non-chaotic systems (h_KS below threshold)
+        self.all_systems = [
+            s for fam in self.families.values()
+            for s in fam
+            if s.h_ks >= self.config.min_h_ks
+        ]
+
+        if not self.all_systems:
+            raise ValueError(f"No systems with h_KS >= {self.config.min_h_ks}")
+
         self.task_counter = 0
     
     def generate_task(self, system: ChaoticSystem = None) -> Task:
