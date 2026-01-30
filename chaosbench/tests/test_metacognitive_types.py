@@ -89,3 +89,26 @@ class TestParseAction:
     def test_parse_no_json_raises(self):
         with pytest.raises(ValueError):
             parse_action("Just some text with no JSON")
+
+
+class TestParseHypothesisActions:
+    def test_parse_hypothesize(self):
+        """Parse HYPOTHESIZE action."""
+        response = '''I think this is logistic.
+        {"action": "HYPOTHESIZE", "model": "logistic", "params": {"r": 3.85}}'''
+
+        action = parse_action(response)
+
+        assert action.action == "HYPOTHESIZE"
+        assert action.model == "logistic"
+        assert action.params == {"r": 3.85}
+
+    def test_parse_fit(self):
+        """Parse FIT action."""
+        response = '''Let me fit the model.
+        {"action": "FIT", "model": "tent"}'''
+
+        action = parse_action(response)
+
+        assert action.action == "FIT"
+        assert action.model == "tent"
