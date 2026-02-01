@@ -10,11 +10,12 @@ from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
 
 def main():
     parser = argparse.ArgumentParser(description="Run metacognitive agent on ChaosBench")
-    parser.add_argument("--model", default="gemini/gemini-3-flash-preview", help="LLM model to use")
+    parser.add_argument("--model", default="gemini/gemini-2.0-flash", help="LLM model to use")
     parser.add_argument("--n-tasks", type=int, default=10, help="Number of tasks")
     parser.add_argument("--timeout", type=int, default=300, help="Session timeout in seconds")
     parser.add_argument("--output", default="session_output", help="Output directory")
     parser.add_argument("--conditional", action="store_true", help="Reveal system family")
+    parser.add_argument("--scaffolded", action="store_true", help="Enable HYPOTHESIZE/FIT actions")
     args = parser.parse_args()
 
     # Setup
@@ -22,16 +23,17 @@ def main():
     output_dir.mkdir(exist_ok=True)
 
     # Create agent and runner
-    agent = MetacognitiveAgent(model=args.model)
+    agent = MetacognitiveAgent(model=args.model, scaffolded=args.scaffolded)
     config = SessionConfig(
         n_tasks=args.n_tasks,
         timeout_seconds=args.timeout,
         conditional=args.conditional,
+        scaffolded=args.scaffolded,
     )
     runner = SessionRunner(config)
 
     print(f"Running {args.n_tasks} tasks with {args.model}...")
-    print(f"Timeout: {args.timeout}s, Conditional: {args.conditional}")
+    print(f"Timeout: {args.timeout}s, Conditional: {args.conditional}, Scaffolded: {args.scaffolded}")
     print("-" * 50)
 
     # Run session
