@@ -31,6 +31,9 @@ class SessionConfig:
     weighting: Callable[[float], float] = DifficultyWeighting.linear
     max_turns_per_task: int = 20  # Safety limit
     scaffolded: bool = True  # If False, disable HYPOTHESIZE/FIT/WRITE/DELETE
+    # Difficulty settings
+    horizon_multiplier: float = 1.5  # Horizon = k * lyapunov_time (higher = harder)
+    noise_std: float = 0.01  # Observation noise (higher = harder)
 
 
 @dataclass
@@ -67,6 +70,8 @@ class SessionRunner:
         task_config = TaskConfig(
             conditional=self.config.conditional,
             n_obs=50,
+            horizon_lyapunov_multiplier=self.config.horizon_multiplier,
+            noise_std=self.config.noise_std,
         )
         generator = TaskGenerator(task_config)
         return generator.generate_batch(self.config.n_tasks, stratified=True)

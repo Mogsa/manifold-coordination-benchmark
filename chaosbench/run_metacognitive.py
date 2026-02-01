@@ -17,6 +17,9 @@ def main():
     parser.add_argument("--output", default="session_output", help="Output directory")
     parser.add_argument("--conditional", action="store_true", help="Reveal system family")
     parser.add_argument("--scaffolded", action="store_true", help="Enable HYPOTHESIZE/FIT actions")
+    # Difficulty settings
+    parser.add_argument("--horizon", type=float, default=1.5, help="Horizon multiplier (higher=harder, default 1.5)")
+    parser.add_argument("--noise", type=float, default=0.01, help="Observation noise std (higher=harder, default 0.01)")
     args = parser.parse_args()
 
     # Setup
@@ -30,11 +33,14 @@ def main():
         timeout_seconds=args.timeout,
         conditional=args.conditional,
         scaffolded=args.scaffolded,
+        horizon_multiplier=args.horizon,
+        noise_std=args.noise,
     )
     runner = SessionRunner(config)
 
     print(f"Running {args.n_tasks} tasks with {args.model}...")
     print(f"Timeout: {args.timeout}s, Conditional: {args.conditional}, Scaffolded: {args.scaffolded}")
+    print(f"Difficulty: horizon={args.horizon}x, noise={args.noise}")
     print("-" * 50)
 
     # Run session
