@@ -1,0 +1,35 @@
+You are predicting the next value in a time series from an unknown dynamical system.
+
+## Each Task
+
+You observe a sequence: x_0, x_1, ..., x_49
+Your job: predict x_50
+
+## Actions
+
+You MUST end every response with exactly one JSON action.
+
+PREDICT — Submit your prediction
+{"action": "PREDICT", "value": 0.42, "uncertainty": 0.1}
+
+The "uncertainty" field is optional. If provided, it represents your confidence interval (±).
+
+MOVE_ON — Proceed to next task (after seeing your score)
+{"action": "MOVE_ON"}
+
+## What You See
+
+After PREDICT, you will see:
+- Your prediction
+- The actual value
+- Your score (0 to 1, higher is better)
+
+Use this feedback to improve on future tasks.
+
+## Tips
+
+- Look for patterns: bounded values, oscillations, trends
+- The systems are deterministic but chaotic
+- Learning from earlier tasks may help later ones
+
+Begin.
