@@ -6,6 +6,7 @@ import json
 
 from chaosbench.experiments.session import SessionRunner, SessionConfig
 from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
+from chaosbench.visualization import plot_phi_curve, plot_session_summary
 
 
 def main():
@@ -63,6 +64,33 @@ def main():
     ]
     phi_path.write_text(json.dumps(phi_data, indent=2))
     print(f"Phi(t) curve saved to: {phi_path}")
+
+    # Generate visualizations
+    print("Generating visualizations...")
+
+    # Plot Φ(n) curve
+    phi_plot_path = output_dir / "phi_curve.png"
+    plot_phi_curve(
+        phi_data,
+        title=f"Learning Curve - {args.model}",
+        save_path=str(phi_plot_path),
+        show=False,
+    )
+    print(f"Φ(n) plot saved to: {phi_plot_path}")
+
+    # Extract per-task scores from trace
+    scores = [task.final_score for task in result.trace.tasks]
+
+    # Plot session summary
+    summary_plot_path = output_dir / "session_summary.png"
+    plot_session_summary(
+        phi_data,
+        scores,
+        title=f"Session Summary - {args.model} ({'Scaffolded' if args.scaffolded else 'MVP'})",
+        save_path=str(summary_plot_path),
+        show=False,
+    )
+    print(f"Summary plot saved to: {summary_plot_path}")
 
 
 if __name__ == "__main__":
