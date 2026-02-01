@@ -30,6 +30,7 @@ class SessionConfig:
     conditional: bool = True
     weighting: Callable[[float], float] = DifficultyWeighting.linear
     max_turns_per_task: int = 20  # Safety limit
+    scaffolded: bool = True  # If False, disable HYPOTHESIZE/FIT/WRITE/DELETE
 
 
 @dataclass
@@ -149,14 +150,24 @@ class SessionRunner:
                     self.trace.log_turn(reasoning, action, feedback=None)
 
                 elif action.action == "WRITE":
+                    if not self.config.scaffolded:
+                        # Ignore WRITE in MVP mode, just log and continue
+                        self.trace.log_turn(reasoning, action, feedback=None)
+                        continue
                     self.learnings.write(action.text)
                     self.trace.log_turn(reasoning, action, feedback=None)
 
                 elif action.action == "DELETE":
+                    if not self.config.scaffolded:
+                        self.trace.log_turn(reasoning, action, feedback=None)
+                        continue
                     self.learnings.delete(action.section)
                     self.trace.log_turn(reasoning, action, feedback=None)
 
                 elif action.action == "HYPOTHESIZE":
+                    if not self.config.scaffolded:
+                        self.trace.log_turn(reasoning, action, feedback=None)
+                        continue
                     # Test the hypothesis against observations
                     result = backtest_model(
                         action.model,
@@ -173,6 +184,9 @@ class SessionRunner:
                     self.trace.log_turn(reasoning, action, feedback=None, backtest=backtest_fb)
 
                 elif action.action == "FIT":
+                    if not self.config.scaffolded:
+                        self.trace.log_turn(reasoning, action, feedback=None)
+                        continue
                     # Fit parameters for the model family
                     result = fit_model(action.model, task.observations.flatten())
                     backtest_fb = BacktestFeedback(
