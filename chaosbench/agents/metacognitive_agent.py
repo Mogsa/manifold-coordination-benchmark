@@ -15,21 +15,27 @@ class MetacognitiveAgent:
 
     def __init__(
         self,
-        model: str = "gemini/gemini-3-flash-preview",
+        model: str = "gemini/gemini-2.0-flash",
         temperature: float = 0.7,
         max_tokens: int = 4000,
+        scaffolded: bool = True,
     ):
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.scaffolded = scaffolded
         self.system_prompt = self._load_system_prompt()
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
     def _load_system_prompt(self) -> str:
-        """Load system prompt from file."""
-        prompt_path = Path(__file__).parent.parent / "prompts" / "metacognitive_system.txt"
-        if prompt_path.exists():
-            return prompt_path.read_text()
+        """Load the appropriate system prompt."""
+        prompt_dir = Path(__file__).parent.parent / "prompts"
+        if self.scaffolded:
+            prompt_file = prompt_dir / "hypothesis_system.txt"
+        else:
+            prompt_file = prompt_dir / "mvp_system.txt"
+        if prompt_file.exists():
+            return prompt_file.read_text()
         # Fallback inline prompt
         return """You are a scientist studying unknown dynamical systems.
 Predict future states from observations. Output JSON actions."""
@@ -57,6 +63,12 @@ Predict future states from observations. Output JSON actions."""
             lines.append(f"- Your prediction: {obs.last_feedback.prediction:.3f}")
             lines.append(f"- Actual value: {obs.last_feedback.actual:.3f}")
             lines.append(f"- Score: {obs.last_feedback.score:.2f}")
+
+        # Include backtest feedback if present
+        if obs.last_backtest:
+            lines.append("")
+            lines.append("**Backtest result:**")
+            lines.append(obs.last_backtest.format())
 
         # Include learnings
         lines.append("")
