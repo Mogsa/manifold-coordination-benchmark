@@ -367,11 +367,15 @@ def create_chaotic_system(family: str = None) -> ChaoticSystem:
 def get_chaotic_systems() -> List[ChaoticSystem]:
     """Get all provably chaotic systems.
 
-    Returns list containing logistic r=4 and tent μ=2.
+    Note: Tent map μ=2 is excluded due to numerical instability —
+    floating-point precision causes trajectories to fall into the
+    fixed point at x=0. Logistic r=4 is numerically stable.
+
+    Returns list containing logistic r=4 only.
     """
     return [
         LogisticMap(r=4.0),
-        TentMap(mu=2.0),
+        # TentMap excluded: degenerates to fixed point due to float precision
     ]
 
 
