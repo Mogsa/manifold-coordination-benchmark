@@ -8,7 +8,9 @@ Your job: predict x_50
 ## Action
 
 End your response with a JSON prediction:
-{"action": "PREDICT", "value": 0.42}
+{"action": "PREDICT", "value": <your_prediction>}
+
+Replace <your_prediction> with your actual numeric prediction (e.g., 0.73).
 
 After you predict, you'll see your score and the actual value, then move to the next task.
 
