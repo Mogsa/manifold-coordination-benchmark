@@ -9,7 +9,9 @@ from chaosbench.core.Chaosbench_v3 import (
     TaskConfig,
     Task,
     DifficultyWeighting,
+    get_chaotic_systems,
 )
+from chaosbench.core.scoring import compute_score
 from chaosbench.agents.metacognitive_types import (
     AgentObservation,
     AgentAction,
@@ -34,6 +36,10 @@ class SessionConfig:
     # Difficulty settings
     horizon_multiplier: float = 1.5  # Horizon = k * lyapunov_time (higher = harder)
     noise_std: float = 0.01  # Observation noise (higher = harder)
+    # System selection
+    families: List[str] = field(default_factory=lambda: ["chaotic"])
+    # Valid options: ["chaotic"] for logistic r=4 + tent μ=2 only,
+    # or ["logistic", "tent", "henon", ...] for specific families
 
 
 @dataclass
@@ -53,6 +59,7 @@ class SessionResult:
     final_learnings: str
     trace: TraceLogger
     total_time: float
+    tasks: List[Task] = field(default_factory=list)  # Store tasks for visualization
 
 
 class SessionRunner:
@@ -66,7 +73,12 @@ class SessionRunner:
         self.cumulative_phi = 0.0
 
     def _generate_tasks(self) -> List[Task]:
-        """Generate tasks for the session."""
+        """Generate tasks for the session.
+
+        Uses self.config.families to determine which systems to use:
+        - ["chaotic"]: Only logistic r=4 and tent μ=2 (provably chaotic)
+        - ["logistic", "tent", ...]: Specific families from create_system_family()
+        """
         task_config = TaskConfig(
             conditional=self.config.conditional,
             n_obs=50,
@@ -74,19 +86,62 @@ class SessionRunner:
             noise_std=self.config.noise_std,
         )
         generator = TaskGenerator(task_config)
-        return generator.generate_batch(self.config.n_tasks, stratified=True)
 
-    def _compute_score(self, prediction: float, task: Task) -> tuple[float, float]:
-        """Compute score for a prediction.
+        # Check if using chaotic-only mode
+        if self.config.families == ["chaotic"]:
+            # Use only provably chaotic systems (logistic r=4, tent μ=2)
+            chaotic_systems = get_chaotic_systems()
+            tasks = []
+            for i in range(self.config.n_tasks):
+                # Alternate between logistic and tent
+                system = chaotic_systems[i % len(chaotic_systems)]
+                tasks.append(generator.generate_task(system))
+            return tasks
+        else:
+            # Use standard stratified generation from specified families
+            # (TaskGenerator already filters by min_h_ks)
+            return generator.generate_batch(self.config.n_tasks, stratified=True)
+
+    def _compute_score(
+        self,
+        prediction: float,
+        task: Task,
+        sigma: float = 0.1,
+    ) -> tuple[float, float]:
+        """Compute NLL-based score for a prediction.
+
+        Uses bin-based probabilistic scoring:
+        - Prediction is treated as center of truncated Gaussian with std=sigma
+        - Score = probability mass in the bin containing actual value
+        - Punishes confident wrong predictions, rewards calibrated uncertainty
+
+        Args:
+            prediction: Agent's predicted value
+            task: The task being evaluated
+            sigma: Uncertainty (std dev), default 0.1
 
         Returns: (score, actual_value)
         """
         actual = float(task.true_future[0]) if task.true_future.ndim > 0 else float(task.true_future)
 
-        # Score based on distance (simple version)
-        # Could use NLL on discretized space for full version
-        error = abs(prediction - actual)
-        score = np.exp(-error * 5)  # Exponential decay
+        # Get bounds based on system family
+        bounds_map = {
+            "logistic": (0.0, 1.0),
+            "tent": (0.0, 1.0),
+            "henon": (-1.5, 1.5),
+            "standard": (0.0, 2 * np.pi),
+            "lorenz": (-30.0, 30.0),
+        }
+        bounds = bounds_map.get(task.system.family, (0.0, 1.0))
+
+        # Compute NLL-based score
+        score = compute_score(
+            prediction=prediction,
+            actual=actual,
+            sigma=sigma,
+            n_bins=20,
+            bounds=bounds,
+        )
 
         return score, actual
 
@@ -264,4 +319,5 @@ class SessionRunner:
             final_learnings=self.learnings.content,
             trace=self.trace,
             total_time=time.time() - start_time,
+            tasks=tasks,  # Store for visualization
         )

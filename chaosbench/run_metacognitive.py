@@ -6,7 +6,7 @@ import json
 
 from chaosbench.experiments.session import SessionRunner, SessionConfig
 from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
-from chaosbench.visualization import plot_phi_curve, plot_session_summary
+from chaosbench.visualization import plot_phi_curve, plot_session_summary, plot_task
 
 
 def main():
@@ -20,6 +20,9 @@ def main():
     # Difficulty settings
     parser.add_argument("--horizon", type=float, default=1.5, help="Horizon multiplier (higher=harder, default 1.5)")
     parser.add_argument("--noise", type=float, default=0.01, help="Observation noise std (higher=harder, default 0.01)")
+    # Visualization settings
+    parser.add_argument("--save-task-plots", action="store_true", help="Save individual task plots with bins")
+    parser.add_argument("--max-task-plots", type=int, default=10, help="Max number of task plots to save (default 10)")
     args = parser.parse_args()
 
     # Setup
@@ -97,6 +100,56 @@ def main():
         show=False,
     )
     print(f"Summary plot saved to: {summary_plot_path}")
+
+    # Generate individual task plots if requested
+    if args.save_task_plots:
+        task_plots_dir = output_dir / "task_plots"
+        task_plots_dir.mkdir(exist_ok=True)
+
+        n_plots = min(args.max_task_plots, len(result.tasks))
+        print(f"Generating {n_plots} task plots...")
+
+        for i in range(n_plots):
+            task = result.tasks[i]
+            task_trace = result.trace.tasks[i]
+
+            # Get prediction and actual from trace feedback
+            prediction = None
+            actual = None
+            for turn in task_trace.turns:
+                if turn.feedback is not None:
+                    prediction = turn.feedback.prediction
+                    actual = turn.feedback.actual
+                    break
+
+            if actual is None:
+                # Fallback: get actual from task
+                actual = float(task.true_future[0]) if task.true_future.ndim > 0 else float(task.true_future)
+
+            # Determine bounds based on system family
+            bounds_map = {
+                "logistic": (0.0, 1.0),
+                "tent": (0.0, 1.0),
+                "henon": (-1.5, 1.5),
+                "standard": (0.0, 6.28),
+                "lorenz": (-30.0, 30.0),
+            }
+            bounds = bounds_map.get(task.system.family, (0.0, 1.0))
+
+            plot_path = task_plots_dir / f"task_{i+1:02d}_{task.system.family}.png"
+            plot_task(
+                observations=task.observations.flatten(),
+                actual=actual,
+                prediction=prediction,
+                uncertainty=0.1,  # Default sigma
+                title=f"Task {i+1}: {task.system.family} (h_KS={task.h_ks:.3f})",
+                save_path=str(plot_path),
+                show=False,
+                n_bins=20,
+                bounds=bounds,
+            )
+
+        print(f"Task plots saved to: {task_plots_dir}/")
 
 
 if __name__ == "__main__":

@@ -326,6 +326,55 @@ def create_system_family() -> Dict[str, List[ChaoticSystem]]:
     return families
 
 
+def create_chaotic_system(family: str = None) -> ChaoticSystem:
+    """Create a provably chaotic system with no periodic windows.
+
+    Only returns systems at parameters where chaos is mathematically guaranteed:
+    - Logistic map: r=4.0 (fully chaotic, h_KS = ln(2) ≈ 0.693)
+    - Tent map: μ=2.0 (fully chaotic, h_KS = ln(2) ≈ 0.693)
+
+    These 1D maps at these exact parameters have:
+    - No periodic windows
+    - Positive Lyapunov exponents
+    - Ergodic invariant measures
+
+    Args:
+        family: "logistic" or "tent". If None, randomly selects one.
+
+    Returns:
+        A ChaoticSystem instance guaranteed to be chaotic.
+
+    Raises:
+        ValueError: If family is not "logistic" or "tent".
+    """
+    chaotic_systems = {
+        "logistic": LogisticMap(r=4.0),
+        "tent": TentMap(mu=2.0),
+    }
+
+    if family is None:
+        family = np.random.choice(list(chaotic_systems.keys()))
+
+    if family not in chaotic_systems:
+        raise ValueError(
+            f"Unknown chaotic family: {family}. "
+            f"Valid options: {list(chaotic_systems.keys())}"
+        )
+
+    return chaotic_systems[family]
+
+
+def get_chaotic_systems() -> List[ChaoticSystem]:
+    """Get all provably chaotic systems.
+
+    Returns list containing logistic r=4 and tent μ=2.
+    """
+    return [
+        LogisticMap(r=4.0),
+        TentMap(mu=2.0),
+    ]
+
+
 # =============================================================================
 # PART 2: DISCRETIZED STATE SPACE FOR CLEAN NLL
 # =============================================================================

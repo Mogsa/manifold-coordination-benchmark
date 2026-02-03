@@ -12,6 +12,8 @@ def plot_task(
     title: str = "Task",
     save_path: Optional[str] = None,
     show: bool = True,
+    n_bins: int = 0,
+    bounds: tuple[float, float] = (0.0, 1.0),
 ) -> plt.Figure:
     """Plot a single task: observations + prediction vs actual.
 
@@ -23,6 +25,8 @@ def plot_task(
         title: Plot title
         save_path: Path to save figure (optional)
         show: Whether to display the plot
+        n_bins: Number of bins to show (0 = no bins, 20 = standard)
+        bounds: (low, high) bounds for bin display
 
     Returns:
         matplotlib Figure object
@@ -33,8 +37,25 @@ def plot_task(
     t_obs = np.arange(n_obs)
     t_target = n_obs
 
+    # Draw bins as horizontal bands if requested
+    if n_bins > 0:
+        edges = np.linspace(bounds[0], bounds[1], n_bins + 1)
+        # Find which bin contains the actual value
+        actual_clamped = np.clip(actual, bounds[0], bounds[1])
+        actual_bin = np.searchsorted(edges[1:-1], actual_clamped)
+
+        # Draw alternating light bands for bins
+        for i in range(n_bins):
+            color = 'lightgreen' if i == actual_bin else ('whitesmoke' if i % 2 == 0 else 'white')
+            alpha = 0.4 if i == actual_bin else 0.2
+            ax.axhspan(edges[i], edges[i + 1], color=color, alpha=alpha, zorder=0)
+
+        # Draw bin edges as thin lines
+        for edge in edges:
+            ax.axhline(y=edge, color='gray', linewidth=0.5, alpha=0.3, zorder=1)
+
     # Plot observations
-    ax.plot(t_obs, observations, 'b.-', label='Observations', markersize=4, linewidth=1)
+    ax.plot(t_obs, observations, 'b.-', label='Observations', markersize=4, linewidth=1, zorder=2)
 
     # Plot actual value
     ax.scatter([t_target], [actual], color='green', s=100, marker='o',
@@ -50,6 +71,15 @@ def plot_task(
             ax.errorbar([t_target], [prediction], yerr=uncertainty,
                        color='red', capsize=5, capthick=2, linewidth=2)
 
+        # If bins enabled, annotate which bin prediction falls in
+        if n_bins > 0:
+            pred_clamped = np.clip(prediction, bounds[0], bounds[1])
+            pred_bin = np.searchsorted(edges[1:-1], pred_clamped)
+            same_bin = pred_bin == actual_bin
+            bin_note = f"Same bin" if same_bin else f"Pred bin: {pred_bin}, Actual bin: {actual_bin}"
+            ax.annotate(bin_note, xy=(t_target, prediction), xytext=(t_target + 2, prediction),
+                       fontsize=8, color='darkred' if not same_bin else 'darkgreen')
+
     ax.set_xlabel('Time step')
     ax.set_ylabel('Value')
     ax.set_title(title)
@@ -58,6 +88,11 @@ def plot_task(
 
     # Add vertical line separating observations from prediction
     ax.axvline(x=n_obs - 0.5, color='gray', linestyle='--', alpha=0.5)
+
+    # Set y-axis limits to show bins properly if enabled
+    if n_bins > 0:
+        margin = (bounds[1] - bounds[0]) * 0.05
+        ax.set_ylim(bounds[0] - margin, bounds[1] + margin)
 
     plt.tight_layout()
 
