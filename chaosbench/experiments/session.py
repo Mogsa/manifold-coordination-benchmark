@@ -187,8 +187,9 @@ class SessionRunner:
                 h_ks=task.h_ks,
             )
 
-            last_prediction = None  # Store prediction, don't reveal answer
-            last_backtest = None  # Store backtest feedback for next turn
+            last_prediction = None
+            last_score = None  # Will be set by PREDICT
+            last_backtest = None
             turn_count = 0
 
             while turn_count < self.config.max_turns_per_task:
@@ -204,10 +205,16 @@ class SessionRunner:
                 feedback = None
 
                 if action.action == "PREDICT":
-                    # Just record the prediction, don't compute or reveal score yet
+                    # Record prediction, compute score, and auto-advance
                     last_prediction = action.value
-                    # Log turn with no feedback (agent doesn't see answer)
-                    self.trace.log_turn(reasoning, action, feedback=None)
+                    last_score, actual = self._compute_score(last_prediction, task)
+                    feedback = Feedback(
+                        prediction=last_prediction,
+                        actual=actual,
+                        score=last_score,
+                    )
+                    self.trace.log_turn(reasoning, action, feedback)
+                    break  # Auto-advance to next task after PREDICT
 
                 elif action.action == "WRITE":
                     if not self.config.scaffolded:
@@ -293,11 +300,12 @@ class SessionRunner:
                                 break
                     break
 
-            # Compute final score (in case agent hit turn limit without MOVE_ON)
-            if last_prediction is not None and 'last_score' not in dir():
-                last_score, _ = self._compute_score(last_prediction, task)
-            elif last_prediction is None:
-                last_score = 0.0
+            # Compute final score if not already set (e.g., turn limit hit)
+            if last_score is None:
+                if last_prediction is not None:
+                    last_score, _ = self._compute_score(last_prediction, task)
+                else:
+                    last_score = 0.0
 
             # Bank score
             weighted_score = self.config.weighting(task.h_ks) * last_score

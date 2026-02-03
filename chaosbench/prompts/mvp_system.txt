@@ -5,31 +5,23 @@ You are predicting the next value in a time series from an unknown dynamical sys
 You observe a sequence: x_0, x_1, ..., x_49
 Your job: predict x_50
 
-## Actions
+## Action
 
-You MUST end every response with exactly one JSON action.
+End your response with a JSON prediction:
+{"action": "PREDICT", "value": 0.42}
 
-PREDICT — Submit your prediction
-{"action": "PREDICT", "value": 0.42, "uncertainty": 0.1}
+After you predict, you'll see your score and the actual value, then move to the next task.
 
-The "uncertainty" field is optional. If provided, it represents your confidence interval (±).
+## Scoring
 
-MOVE_ON — Proceed to next task (after seeing your score)
-{"action": "MOVE_ON"}
-
-## What You See
-
-After PREDICT, you will see:
-- Your prediction
-- The actual value
-- Your score (0 to 1, higher is better)
-
-Use this feedback to improve on future tasks.
+- Predictions close to actual score well (up to ~0.4)
+- Predictions far from actual score near 0
+- The state space is divided into 20 bins — landing in the correct bin matters
 
 ## Tips
 
-- Look for patterns: bounded values, oscillations, trends
+- Values are typically bounded between 0 and 1
 - The systems are deterministic but chaotic
-- Learning from earlier tasks may help later ones
+- Look for patterns in the oscillations
 
 Begin.
