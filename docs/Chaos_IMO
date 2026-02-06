@@ -1,0 +1,1110 @@
+# ChaosBench: Product Requirements Document v2
+
+## A Benchmark for Scientific Reasoning via Dynamical Systems
+
+**Author**: Morgan  
+**Date**: February 2026  
+**Target venue**: NeurIPS 2026  
+**Status**: Architecture — ready for implementation
+
+---
+
+## 1. Executive Summary
+
+ChaosBench measures whether AI systems can perform genuine scientific reasoning — discovering transferable structure across related mathematical problems — or are merely pattern matching against memorised knowledge.
+
+The benchmark presents agents with time series from dynamical systems (chaotic, periodic, quasiperiodic, convergent) and asks questions that require progressively deeper mathematical reasoning: classification, identification, parameter estimation, prediction, and structural comparison. Difficulty comes not from any single hard operation but from **chaining** simple operations — the same principle that makes olympiad problems hard.
+
+Three core innovations:
+
+1. **Mathematical ground truth.** Every answer is verifiable by running the generating system forward. No consensus, no human judgment, no Likert scales.
+
+2. **Rigorous difficulty quantification.** Kolmogorov-Sinai entropy (h_KS) provides an information-theoretic difficulty scale for chaotic systems. A composite difficulty measure incorporating grammar depth and domain diversity extends this to the full problem space.
+
+3. **Transfer detection via Φ(n).** Cumulative performance curves over sequential tasks reveal whether agents learn transferable structure. Superlinear Φ(n) = genuine transfer. Linear = no learning. The blocked-vs-shuffled experimental design isolates structural transfer from context accumulation.
+
+The benchmark is delivered in two tracks:
+
+- **v1 (Static Benchmark)**: Fixed problem bank, frozen conditions, reproducible Φ(n) comparisons. This produces the NeurIPS paper.
+- **v1.5 (Self-Evolving Tournament)**: LLM proposers, adaptive difficulty, discrimination scoring. Demonstrates self-escalation. Separate experiment, separate claims.
+
+### 1.1 Revised v1 MVP Scope (Implementation Override)
+
+For implementation sequencing, this section is the authoritative MVP for **v1-first delivery**.  
+All other v2 sections remain the target architecture, but are intentionally deferred until the MVP is stable.
+
+#### MVP Scope
+
+1. **Static benchmark only**
+   - Fixed problem bank generated once and frozen.
+   - No proposer/tournament loop in MVP.
+
+2. **Atoms (1D only)**
+   - `logistic`, `tent`, `damped_linear`, `rotation`.
+   - Defer `henon`, `sine`, `circle` for post-MVP.
+
+3. **Grammar depth**
+   - Depth 0 only (`atom(params)`).
+   - No connectives in MVP (affine conjugacy deferred).
+
+4. **Question types (3 only)**
+   - `CLASSIFY`, `IDENTIFY`, `PREDICT`.
+   - Defer `ESTIMATE`, `RECONSTRUCT`, `RELATE`.
+
+5. **Scoring contract (MVP)**
+   - `CLASSIFY`: exact match → raw score in `{0, 1}`.
+   - `IDENTIFY`: exact match → raw score in `{0, 1}`.
+   - `PREDICT`: `raw_score = k_eff / K` where `k_eff` is the first-threshold-break horizon.
+   - Weighted score: `weighted_score = raw_score * (1 + h_KS)`.
+   - This keeps `raw_score` in `[0, 1]` for all MVP question types.
+
+6. **Validation (minimal)**
+   - Stage 1: parameter bounds, trajectory stability, NaN/divergence checks, periodicity gate for tasks labeled chaotic.
+   - Stage 2 (PREDICT): `persistence`, `mean reversion`, `AR(5)` baselines.
+   - Reject tasks where naive baselines solve too well.
+
+7. **Experimental conditions**
+   - Run `sequential-blocked` and `sequential-shuffled` first.
+   - Add `independent` once blocked/shuffled pipeline is stable.
+
+8. **Replicates**
+   - MVP minimum: 3 replicates per model-condition.
+
+9. **Bank size target**
+   - 36 tasks total: `4 families × 3 parameter settings × 3 question types`.
+   - Scale to 60–100 after MVP stability.
+
+10. **Success gate for graduating MVP**
+   - End-to-end pipeline runs with automatic scoring and reproducible Φ(n) curves.
+   - Blocked vs shuffled produces stable, non-degenerate curves.
+   - At least one model beats the best naive baseline on at least one family/question slice.
+
+#### Deferred from MVP
+
+- Proposer scoring and tournament rounds (v1.5)
+- Mixed-effects modeling as a release blocker
+- Confidence calibration as a release blocker
+- Depth-1+ grammar/connectives
+- Additional question types beyond CLASSIFY/IDENTIFY/PREDICT
+
+---
+
+## 2. Core Thesis
+
+**Research question**: Can AI systems discover transferable structure across related dynamical systems, and does this transfer improve with experience?
+
+**Null hypothesis**: LLM performance on sequential tasks is indistinguishable from independent (no-context) performance — Φ_sequential(n) grows linearly at the same rate as Φ_independent(n).
+
+**Alternative hypothesis**: Agents that build internal models of dynamical structure show superlinear Φ(n) growth, with acceleration within family blocks (within-family learning) and at family boundaries (cross-family transfer).
+
+**Why dynamical systems**: They provide anti-gaming by mathematical necessity (sensitivity to initial conditions defeats memorisation), continuous tunable difficulty (parameter tweaks smoothly change complexity), cheap exact verification (iterate and compare), and a deep mathematical theory (ergodic theory, bifurcation theory, symbolic dynamics) giving analytical tools for reasoning about benchmark results.
+
+---
+
+## 3. System Grammar
+
+### 3.1 Design Principle: Difficulty Through Chaining
+
+In competition mathematics, a hard problem chains simple theorems. Nobody who only knows one step can solve it. ChaosBench applies the same principle: difficulty emerges from composing simple, well-understood mathematical building blocks via a small set of connectives. Each connective forces a qualitatively different cognitive operation. Chain length × domain diversity = difficulty.
+
+### 3.2 Atoms (Building Blocks)
+
+The atom registry contains any computable iterated map or process. Atoms are not limited to chaotic systems — the vocabulary includes periodic, quasiperiodic, convergent, and linear dynamics. Each atom has: a state update function, a parameter space with valid ranges, and computable Lyapunov exponents.
+
+**v1 Atoms** (implemented first):
+
+| Atom | Type | Dimension | Parameters | Notes |
+|------|------|-----------|------------|-------|
+| Logistic map | Chaotic/periodic | 1D | r ∈ [2.5, 4.0] | r < 3.57: periodic windows. r > 3.57: mostly chaotic. Canonical. |
+| Tent map | Chaotic/periodic | 1D | μ ∈ [1.0, 2.0] | Piecewise linear. Same universality class as logistic. |
+| Hénon map | Chaotic | 2D | a ∈ [1.0, 1.4], b ∈ [0.2, 0.4] | Tests 2D dynamics, delay dependence. |
+| Sine map | Chaotic/periodic | 1D | a ∈ [0.5, 1.0] | x → a·sin(πx). Unimodal like logistic but different shape. Tests abstract class recognition. |
+| Circle map | Quasiperiodic/locked | 1D | K, Ω | Irrational Ω: quasiperiodic. Rational: mode-locked. |
+| Linear rotation | Periodic/quasiperiodic | 1D | ω | x → x + ω (mod 1). Simplest non-chaotic atom. |
+| Damped linear | Convergent | 1D | λ ∈ (0, 1) | x → λx. Converges to 0. Foil for chaos detection. |
+
+**Future atoms** (v1.5+): Rössler, Lorenz (discretised), Standard/Chirikov map, baker's map, Bernoulli shift, driven Duffing oscillator, predator-prey (discretised), Collatz-like integer maps.
+
+**Non-standard parameters are mandatory.** Avoid textbook values (r=4.0, r=3.57, a=1.4) to mitigate pretraining contamination. Use values like r=3.831, a=1.267.
+
+**Hard gates on atom instantiation:**
+- If the atom family can be chaotic: require λ_max > 0.01 (rejects marginally chaotic / periodic windows) unless the problem intentionally tests regime classification
+- Periodicity screen: reject if orbit is periodic with period ≤ 1000 (unless CLASSIFY question targeting periodicity)
+- Bound check: reject if trajectory escapes the expected attractor bounds
+
+### 3.3 Connectives (Composition Operations)
+
+Connectives combine atoms into compound problems. Each connective forces a specific cognitive operation the agent must perform. The connectives are the "theorem-chaining" mechanism.
+
+**v1 Connective:**
+
+| Connective | Operation | Cognitive demand | v1? |
+|------------|-----------|------------------|-----|
+| **Affine conjugacy** | y = ax + b, observe h∘f∘h⁻¹ | "See through a coordinate change" | ✅ |
+
+Implementation: `y_{n+1} = a · f((y_n - b) / a) + b` where f is the original map. Invertible by construction (a ≠ 0). Preserves all dynamical invariants. The return map shape is identical but the scale/offset changes.
+
+Constraints: a ≠ 0 (invertibility). |a| ∈ [0.5, 5.0] and |b| ∈ [0, 3.0] (keeps values in reasonable numerical range).
+
+**v1.5 Connectives:**
+
+| Connective | Operation | Cognitive demand |
+|------------|-----------|------------------|
+| **Skew product** | y_{n+1} = g(y_n, x_n), x drives y | "Solve layer 1 before layer 2" (mandatory reasoning chain) |
+| **Projection** | Observe k < d dimensions | "Reconstruct missing dimensions" (Takens embedding) |
+| **Switching** | f₁ if x < threshold, f₂ otherwise | "Analyse by cases" (proof by cases) |
+
+**v2 Connectives:**
+
+| Connective | Operation | Cognitive demand |
+|------------|-----------|------------------|
+| **Symmetric coupling** | x↔y bidirectional | "Separate interacting components" |
+| **Linear filter** | y_n = Σ aₖ x_{n-k} | "Deconvolve signal from processing" |
+| **Nonlinear conjugacy** | y = h(x) for nonlinear invertible h | "Invariant-based identification" |
+| **Functional composition** | x → f(g(x)) | "Factor into components" |
+
+### 3.4 Grammar Depth
+
+| Depth | Grammar | Example | v1? |
+|-------|---------|---------|-----|
+| 0 | `atom(params)` | `logistic(r=3.831)` | ✅ |
+| 1 | `conjugacy(atom)` | `affine(logistic(3.831), a=2.1, b=-0.5)` | ✅ |
+| 2 | `skew(atom, atom)` | `skew(logistic(3.831), tent(1.742))` | v1.5 |
+| 3 | `conjugacy(skew(...))` | Disguised driven system | v2 |
+| 4 | `skew(skew(...), atom)` | Three-layer reasoning chain | v2 |
+
+Each depth level adds one mandatory reasoning step. Depth 0 is an exercise. Depth 2+ is a problem.
+
+### 3.5 Metadata Computation
+
+Every instantiated system has computable metadata:
+
+- `h_KS`: Kolmogorov-Sinai entropy. For 1D maps: h_KS = max(0, λ) via Pesin's identity. For higher-dimensional or composed systems: sum of positive Lyapunov exponents via QR decomposition on the Jacobian.
+- `lambda_max`: Maximum Lyapunov exponent. Computed analytically for 1D maps (λ = (1/N) Σ ln|f'(x_n)|), numerically via QR for ≥2D.
+- `tau_lambda`: Lyapunov time = 1/λ_max (prediction horizon).
+- `regime`: One of {chaotic, periodic, quasiperiodic, fixed_point, transient_chaos, divergent}.
+- `dim`: State space dimension.
+- `grammar_depth`: 0–4.
+- `family_labels`: List of constituent atom families.
+- `true_params`: Dictionary of all parameters.
+- `connectives_used`: List of connective types applied.
+
+---
+
+## 4. Question Types
+
+### 4.1 Design Principle
+
+The IMO principle: **the atom is simple, the question creates the difficulty.** A single system instance can generate multiple questions. The same time series that's easy to CLASSIFY may be hard to ESTIMATE, and a system easy to IDENTIFY at depth 0 becomes hard at depth 1.
+
+### 4.2 v1 Question Types (6 types, all with exact automatic verification)
+
+---
+
+**CLASSIFY** — What regime is this?
+
+- Input: Time series x_0, ..., x_{T-1}
+- Output: One of {`chaotic`, `periodic`, `quasiperiodic`, `fixed_point`, `transient`}
+- Verification: Exact match against ground truth regime (computed from Lyapunov spectrum and orbit analysis).
+- Difficulty knobs: Near bifurcation boundaries (hard), noisy periodic orbits that mimic chaos, long chaotic transients before periodic settling, high-period orbits that look quasiperiodic.
+- Why it matters: With non-chaotic atoms in the bank, this is a genuine discrimination task, not a trivial "always say chaotic."
+- Anti-gaming: Random guessing = 20% (5 classes). Baseline: classify based on largest Lyapunov exponent estimate. Threshold: baseline must score < 80%.
+
+---
+
+**IDENTIFY** — What system family?
+
+- Input: Time series x_0, ..., x_{T-1}
+- Output: Family label from atom registry (e.g., `"logistic"`, `"tent"`, `"sine"`, `"henon"`)
+- Verification: Exact match against ground truth family label.
+- Difficulty knobs: Grammar depth (depth 0 = recognise raw family; depth 1 = recognise family through affine transform). Number of families in registry (more families = harder discrimination). Sine map vs logistic (both unimodal — tests abstract vs specific recognition).
+- Anti-gaming: Random guessing = 1/N_families. Baseline: nearest-neighbor on return map features.
+
+---
+
+**ESTIMATE** — What are the parameters?
+
+- Input: Time series + identified family (or family must be inferred first)
+- Output: Dictionary {param_name: value}
+- Verification: Per-parameter normalised error. For parameter p with valid range [p_min, p_max]:
+  ```
+  tolerance(p) = 0.05 × (p_max - p_min)
+  score(p) = max(0, 1 - |estimate - true| / tolerance(p))
+  total_score = mean over all parameters
+  ```
+- Difficulty knobs: Observation noise σ (higher → harder estimation), observation length T (shorter → harder), sensitivity of dynamics to parameter (high sensitivity = small errors cause large trajectory changes, which paradoxically makes estimation easier from trajectory data but harder from statistical properties).
+- Anti-gaming: Baseline: grid search over parameter space, simulate each, pick best match by autocorrelation. Must beat this.
+
+---
+
+**PREDICT** — What comes next?
+
+- Input: Time series x_0, ..., x_{T-1}. Horizon K.
+- Output: Array of K predicted values [x̂_T, ..., x̂_{T+K-1}]
+- Verification: Effective prediction horizon k_eff = largest k such that |x̂_i - x_i| < ε for all i ≤ k, where ε = 0.1 × (max(x) - min(x)) over the training data (10% of attractor diameter).
+  ```
+  score = k_eff × h_KS    (bits of information correctly predicted)
+  ```
+  For non-chaotic systems (h_KS = 0): score = k_eff / K (fraction of horizon predicted correctly). This ensures non-chaotic prediction tasks still contribute meaningfully.
+- Difficulty knobs: K relative to τ_λ. K ≈ 1–2 τ_λ is moderate. K ≈ 5–10 τ_λ is very hard for chaotic systems (point prediction degrades exponentially). Noise level.
+- Anti-gaming: Baselines: persistence (x̂ = x_{T-1}), mean reversion (x̂ = mean), linear AR. For chaotic systems beyond ~1 τ_λ, all baselines fail.
+
+---
+
+**RECONSTRUCT** — What's the true dimension?
+
+- Input: 1D time series (which may be a projection from a higher-dimensional system)
+- Output: Integer (estimated state space dimension)
+- Verification: Exact match against true system dimension.
+- Difficulty knobs: For 1D maps the answer is 1 (easy). For Hénon (2D) observed via x-coordinate only, the agent must recognise that the return map x_{n+1} vs x_n doesn't form a clean curve (because x_{n+1} depends on y_n too). Noise obscures the dimensional signal.
+- Why it matters: Tests Takens' embedding theorem reasoning. An agent that understands delay embedding can plot (x_n, x_{n-1}) and recover the 2D structure.
+- Anti-gaming: Baseline: false nearest neighbors algorithm on delay embeddings. Agents must match or exceed.
+
+---
+
+**RELATE** — How are these two systems connected?
+
+- Input: Two time series (A and B)
+- Output: One of {`same_family_same_params`, `same_family_diff_params`, `same_universality_class`, `conjugate`, `unrelated`}
+- Verification: Exact match against ground truth relationship (known by construction).
+- Difficulty knobs: Two logistic maps at different r = `same_family_diff_params` (easy). A logistic and an affine-conjugated logistic = `conjugate` (medium). A logistic and a tent map = `same_universality_class` (hard — requires understanding unimodal map universality). A logistic and a circle map = `unrelated` (easy).
+- Why it matters: Directly tests cross-system transfer. An agent that understands dynamical invariants can compare Lyapunov exponents, topological entropy, symbolic dynamics to determine relationships without identifying either system.
+- Anti-gaming: Baseline: compare statistical moments (mean, variance, autocorrelation). This catches `same_family_same_params` but fails on conjugacy and universality.
+
+---
+
+### 4.3 Verification Summary
+
+| Type | Output | Verification method | Automatic? |
+|------|--------|-------------------|------------|
+| CLASSIFY | category (5 classes) | Exact match vs ground truth regime | ✅ Exact |
+| IDENTIFY | family label | Exact match vs ground truth family | ✅ Exact |
+| ESTIMATE | {param: value} | Normalised error with explicit tolerance formula | ✅ Tolerance-based |
+| PREDICT | float array | Effective prediction horizon × h_KS | ✅ Threshold-based |
+| RECONSTRUCT | integer | Exact match vs true dimension | ✅ Exact |
+| RELATE | relationship category | Exact match vs constructed relationship | ✅ Exact |
+
+Every verification function is defined mathematically with no ambiguity. No LLM judgment required for scoring.
+
+### 4.4 Future Question Types (v1.5+)
+
+**Tier: Reason**
+- CHARACTERIZE: Compute dynamical invariant (Lyapunov exponent, correlation dimension). Tolerance-verified.
+- BIFURCATE: At what parameter does regime change? Tolerance-verified against known bifurcation points.
+- SENSITIVITY: How does an invariant change with a small parameter perturbation? Direction + magnitude.
+- SEGMENT: Locate changepoints in a switched system. Position-tolerance verified.
+
+**Tier: Predict (extended)**
+- PREDICT-LONG: Characterise the invariant distribution (not point prediction). Verified via KS test against true invariant measure.
+- PREDICT-CONDITIONAL: Predict outcome after intervention. Verified by simulation.
+
+**Tier: Construct**
+- DESIGN: Build a system with target properties. Verified by instantiation + property check.
+- CONJUGATE: Find the coordinate change between two conjugate systems. Verified by composition check.
+
+**Tier: Compare (extended)**
+- RANK: Order multiple systems by complexity. Verified against ground truth invariant ordering.
+- MATCH: Assign unlabeled series to labeled systems. Verified by exact match.
+- SEPARATE: Decompose a mixture into components. Verified by component count + family labels (F1 score).
+
+These are deferred because their verification is either numerically delicate (CHARACTERIZE from noisy data), requires composition connectives not in v1 (SEGMENT, SEPARATE), or requires DSL output (DESIGN, CONJUGATE).
+
+---
+
+## 5. Experimental Design
+
+### 5.1 v1: Static Benchmark (The Paper)
+
+The v1 experiment uses a **fixed problem bank** generated once and frozen before any model is evaluated. This is non-negotiable for fair comparison across conditions and models.
+
+**Problem bank generation:**
+1. For each v1 atom family: generate problems at 5 parameter values spanning the valid range
+2. For each parameter value: generate at depth 0 (raw) and depth 1 (affine conjugacy)
+3. For each system instance: generate all applicable question types
+4. Filter through validation pipeline (§6)
+5. Result: ~60–100 verified problems with known ground truth
+
+**Three experimental conditions** (identical problem bank, all conditions):
+
+| Condition | Context | Task order | What it measures |
+|-----------|---------|------------|-----------------|
+| **Independent** | Fresh context per task | N/A | Per-task baseline capability |
+| **Sequential-blocked** | Cumulative task history | Family blocks, tier-sorted within | Transfer with structure |
+| **Sequential-shuffled** | Cumulative task history | Random permutation | Context accumulation without structure |
+
+**Critical fairness constraints:**
+- Identical problems across all three conditions (same system instances, same parameters, same noise realisations)
+- Identical token budget for context across blocked and shuffled conditions
+- Independent condition uses a generic context of matched length (descriptions of dynamical systems concepts, not past results) to control for context window effects
+- No separately-generated archive summaries. Sequential conditions receive raw task history: previous (observations, question, own answer, correct answer) tuples. This ensures the only difference between blocked and shuffled is ordering.
+
+**Statistical design:**
+- Minimum 3 replicates per condition per model (different RNG seeds for observation noise)
+- 5 replicates preferred
+- Report mean ± std of fitted exponent b
+- Mixed-effects model: random effects = model identity, problem identity; fixed effects = condition (blocked/shuffled/independent), task position n
+
+**Key comparisons:**
+- Blocked vs. Independent = total learning effect
+- Shuffled vs. Independent = context accumulation effect
+- **Blocked vs. Shuffled = structural transfer** ← headline result
+
+### 5.2 v1.5: Self-Evolving Tournament (Separate Experiment)
+
+The self-evolving experiment demonstrates that difficulty escalates adaptively. It uses the round architecture from the original PRD:
+
+```
+Round N:
+  PROPOSE → VALIDATE → SOLVE → SCORE → ARCHIVE
+```
+
+This is run separately from the v1 transfer experiment. Its purpose is to show that (a) LLM proposers can generate valid, discriminating problems within the grammar, and (b) problem difficulty escalates as solvers improve. It does NOT produce the Φ(n) transfer comparison — that comes from v1.
+
+**v1.5 configuration:**
+- 1 proposer (Claude Sonnet 4.5)
+- 4 solvers (mix of models)
+- 4–6 problems per round
+- 10–20 rounds
+- Proposer scored by discrimination (requires all 4 solver scores)
+
+---
+
+## 6. Validation Pipeline
+
+### 6.1 Purpose
+
+Every problem in the bank must be: (a) well-formed (system doesn't diverge, data has structure), (b) non-trivial (naive baselines can't solve it), and (c) not impossible (the ground truth is computable and the problem is solvable in principle).
+
+### 6.2 Stage 1: Hard Gates (automatic, zero cost)
+
+Applied to every problem. Instant accept/reject.
+
+| Gate | Check | Reject if |
+|------|-------|-----------|
+| Parameter bounds | All params within declared family's valid range | Out of range |
+| Trajectory stability | System doesn't diverge or collapse to NaN | Unstable |
+| Attractor bounds | Values stay within expected range | Escape |
+| Minimum λ_max | λ_max > 0.01 (for problems declared chaotic) | Not actually chaotic |
+| Periodicity screen | Orbit not periodic with period ≤ 1000 (for chaotic problems) | Periodic window |
+| Permutation entropy | PE of time series > threshold | No temporal structure (random-like) |
+| Lag-1 autocorrelation | |ACF(1)| > threshold | No temporal dependence |
+
+Problems targeting non-chaotic regimes (periodic, quasiperiodic, convergent) skip the λ_max and periodicity gates but still must pass stability and structure gates.
+
+### 6.3 Stage 2: Baseline Battery (computation only, zero API cost)
+
+Run naive strategies on each problem. The pass/fail logic per question type:
+
+| Question type | Must PASS (above random) | Must FAIL (below ceiling) |
+|---------------|--------------------------|---------------------------|
+| CLASSIFY | At least one baseline > 30% | No baseline > 80% |
+| IDENTIFY | At least one baseline > 1.5/N_families | No baseline > 70% |
+| ESTIMATE | At least one baseline > 0.1 | No baseline > 0.6 |
+| PREDICT | At least one baseline k_eff > 0 | No baseline k_eff > 3·τ_λ |
+| RECONSTRUCT | N/A (baselines always get dim=1) | N/A |
+| RELATE | At least one baseline > 25% | No baseline > 70% |
+
+"Above random" confirms the data has exploitable structure. "Below ceiling" confirms naive strategies can't solve it. The valid zone is between these thresholds.
+
+**Baseline strategies:**
+
+| Baseline | Strategy | Applies to |
+|----------|----------|------------|
+| Persistence | x̂ = x_{T-1} | PREDICT |
+| Mean reversion | x̂ = mean(x) | PREDICT |
+| Linear AR(5) | Fit autoregressive, extrapolate | PREDICT |
+| Histogram sampling | Sample from empirical distribution | PREDICT |
+| Periodic extension | Repeat detected dominant period | PREDICT, CLASSIFY |
+| Statistical moments | Compare mean/var/ACF | CLASSIFY, IDENTIFY, RELATE |
+| Return map nearest-neighbor | Compare return map shape features | IDENTIFY, RELATE |
+| False nearest neighbors | Estimate dimension from delay embedding | RECONSTRUCT |
+| Parameter grid search | Simulate each candidate, match by ACF | ESTIMATE |
+
+### 6.4 Stage 3: LLM Review (v1.5 only)
+
+For the static benchmark (v1), problems are validated by Stages 1–2 only. Human spot-checking replaces LLM review.
+
+For the self-evolving tournament (v1.5), Stage 3 triggers on borderline cases (~10% of proposals) where automated tests are ambiguous. A reviewer agent evaluates well-formedness, difficulty plausibility, and potential exploits. Binary accept/reject.
+
+### 6.5 Oracle and Floor
+
+Every problem bank includes two reference scores:
+
+**Oracle solver**: Knows the true family and parameters. Simulates forward from estimated state. Provides the upper bound on performance. The gap between oracle and best agent = the "reasoning gap."
+
+**Random floor**: Uniformly random answers (random class, random parameter, random predictions from data range). Provides the lower bound. The gap between best agent and random = the total signal.
+
+**Best baseline**: The best-performing baseline from Stage 2. The gap between best agent and best baseline = the "reasoning signal above naive heuristics."
+
+---
+
+## 7. Scoring
+
+### 7.1 Per-Problem Scoring
+
+For problem i:
+
+```
+raw_score(i) = verify(agent_answer, ground_truth)    ∈ [0, 1]
+```
+
+Where `verify` is the question-type-specific function defined in §4.2.
+
+### 7.2 Composite Difficulty
+
+h_KS alone is insufficient for non-prediction tasks (per reviewer feedback). The composite difficulty for problem i:
+
+```
+difficulty(i) = (1 + h_KS(i)) × (1 + grammar_depth(i)) × (1 + noise_factor(i))
+```
+
+Where:
+- h_KS(i) ∈ [0, ~0.7] for v1 systems. For non-chaotic systems, h_KS = 0, so the (1 + h_KS) term contributes 1.0 — the problem isn't trivially weighted to zero.
+- grammar_depth(i) ∈ {0, 1} for v1.
+- noise_factor(i) = 10 × σ, where σ is the observation noise std.
+
+This ensures that a depth-1 non-chaotic problem contributes more than a depth-0 non-chaotic problem, and that noisy problems contribute more than clean ones.
+
+### 7.3 Weighted Score
+
+```
+weighted_score(i) = difficulty(i) × raw_score(i)
+```
+
+### 7.4 Φ(n) Transfer Curve
+
+After the n-th problem in a sequential condition:
+
+```
+Φ(n) = Σ_{i=1}^{n} weighted_score(i)
+```
+
+**Transfer detection**: Fit Φ(n) = a·n^b via log-log linear regression.
+- b ≈ 1.0 → linear (no transfer)
+- b > 1.05 → superlinear (transfer occurring)
+- b < 0.95 → sublinear (forgetting or interference)
+
+Report the exponent b with bootstrap 95% confidence intervals. The blocked-vs-shuffled comparison of b values is the headline statistical test.
+
+**Additional analysis** (per reviewer suggestion): Mixed-effects regression on per-problem scores with condition as fixed effect, model and problem as random effects. This provides a complementary statistical framework that doesn't assume the power-law functional form.
+
+### 7.5 Calibration Metrics
+
+If agents output confidence values, evaluate calibration:
+- **ECE (Expected Calibration Error)**: Bin predictions by confidence, compare mean confidence to mean accuracy per bin.
+- **Brier score**: Mean squared difference between confidence and binary outcome.
+
+Report these as secondary metrics. Well-calibrated confidence is a sign of genuine understanding vs guessing.
+
+### 7.6 Proposer Scoring (v1.5 only)
+
+For the self-evolving tournament:
+
+```
+discrimination(problem) = var([solver_scores]) if 0 < solve_rate < 1 else 0
+```
+
+With 4 solvers, variance is noisy. Use bootstrap confidence intervals on the variance estimate. Consider IRT-style difficulty/discrimination fitting when sufficient data accumulates across rounds.
+
+---
+
+## 8. Agent Interface
+
+### 8.1 v1: Raw Mode
+
+The agent is an LLM with a fixed prompt and task history. No tools, no DSL, no scaffolding. What varies between agents is only the model. This ensures performance differences are attributable to reasoning capability, not engineering.
+
+```python
+@dataclass
+class Problem:
+    problem_id: str
+    observations: np.ndarray          # shape (T,) for 1D, (T, d) for multi-D
+    question_type: str                 # "CLASSIFY", "IDENTIFY", etc.
+    question_params: dict              # e.g., {"horizon_K": 10} for PREDICT
+    metadata: dict                     # h_KS, difficulty, grammar_depth (shown to agent)
+    # NOT shown to agent: ground_truth, true_params, family_labels
+
+@dataclass 
+class Solution:
+    answer: Any                        # type depends on question
+    confidence: float                  # 0–1
+    reasoning_trace: str               # free-text reasoning (stored, not scored)
+
+class Agent(Protocol):
+    @property
+    def agent_id(self) -> str: ...
+    
+    def solve(
+        self,
+        problem: Problem,
+        task_history: list[TaskResult]  # previous (problem, own_answer, correct_answer)
+    ) -> Solution: ...
+```
+
+### 8.2 What the Agent Sees
+
+For each problem, the agent receives:
+1. The raw time series as comma-separated values
+2. The question type and any type-specific parameters
+3. The difficulty metadata (h_KS, grammar depth, noise level) — shown openly
+4. The list of valid answer options (family names for IDENTIFY, regime labels for CLASSIFY, etc.)
+5. Task history from previous problems in this session (sequential conditions only)
+
+The agent does NOT see: ground truth answers for the current problem, the true system specification, or the generating code.
+
+### 8.3 v1 Model Roster
+
+| Agent ID | Model | Notes |
+|----------|-------|-------|
+| sonnet | Claude Sonnet 4.5 | Baseline |
+| sonnet-thinking | Claude Sonnet 4.5 (extended thinking) | Same model + reasoning budget |
+| gpt | GPT-5.2 | Cross-vendor |
+| gemini | Gemini 3 | Cross-vendor |
+
+At minimum: one within-model comparison (sonnet vs sonnet-thinking) and one cross-vendor comparison. Adjust based on availability and cost.
+
+---
+
+## 9. Observation Model
+
+### 9.1 Parameters
+
+| Parameter | v1 Default | Range | Effect |
+|-----------|-----------|-------|--------|
+| T (n_points) | 200 | 50–500 | More = easier identification/estimation |
+| σ (noise_std) | 0.01 | 0–0.1 | Higher = harder (masks structure) |
+| stride | 1 | 1–10 | Higher = sparser, harder |
+| dims_visible | "all" | "all" or subset | Partial observability (v1.5) |
+
+### 9.2 Observation Noise is Non-Negotiable
+
+Without noise, parameter estimation from clean 1D map data is trivially precise. For the logistic map: r = x_{n+1} / (x_n(1-x_n)). With 200 clean observations, δr < 10^{-10}. This collapses the difficulty gradient.
+
+Calibrate σ so that parameter estimation precision is δp ~ 10^{-2} to 10^{-3} (meaningful but not trivial). For v1: σ = 0.01 as default, with problems at σ ∈ {0.005, 0.01, 0.02, 0.05} spanning the difficulty range.
+
+### 9.3 Prediction Horizon
+
+For PREDICT questions: K = ceil(5 × τ_λ) for chaotic systems. This ensures the horizon extends well beyond the Lyapunov time, so accurate prediction requires genuine model quality. For non-chaotic systems: K = 20 (fixed).
+
+### 9.4 Noise Seed Reproducibility
+
+Each problem instance is defined by: (system_spec, initial_condition_seed, noise_seed). Given these three values, the exact observation sequence is reproducible. All seeds stored in the database.
+
+---
+
+## 10. Data Architecture
+
+### 10.1 SQLite Schema
+
+```sql
+-- Experiment metadata
+experiments(
+    experiment_id TEXT PRIMARY KEY,
+    created_at TIMESTAMP,
+    track TEXT,                      -- "static_v1" or "tournament_v1.5"
+    code_commit_hash TEXT,
+    config JSON                      -- full experiment configuration
+)
+
+-- Problem bank
+problems(
+    problem_id TEXT PRIMARY KEY,
+    experiment_id TEXT,
+    -- System specification (reproducible)
+    system_spec JSON,                -- atom family, params, connectives
+    initial_condition_seed INT,
+    noise_seed INT,
+    -- Observation parameters
+    n_points INT,
+    noise_std REAL,
+    stride INT,
+    -- Question
+    question_type TEXT,
+    question_params JSON,
+    -- Ground truth (computed, not shown to agents)
+    ground_truth JSON,
+    family_labels JSON,
+    true_params JSON,
+    regime TEXT,
+    -- Computed metadata
+    h_ks REAL,
+    lambda_max REAL,
+    grammar_depth INT,
+    composite_difficulty REAL,
+    -- Validation
+    validation_passed BOOLEAN,
+    baseline_scores JSON,
+    oracle_score REAL,
+    random_floor_score REAL
+)
+
+-- Problem bank orderings (one per condition)
+orderings(
+    ordering_id TEXT PRIMARY KEY,
+    experiment_id TEXT,
+    condition TEXT,                   -- "independent", "blocked", "shuffled"
+    problem_sequence JSON             -- ordered list of problem_ids
+)
+
+-- Individual submissions
+submissions(
+    submission_id TEXT PRIMARY KEY,
+    experiment_id TEXT,
+    problem_id TEXT,
+    ordering_id TEXT,
+    agent_id TEXT,
+    replicate INT,
+    -- Response
+    answer JSON,
+    confidence REAL,
+    reasoning_trace TEXT,
+    -- Scoring
+    raw_score REAL,
+    weighted_score REAL,
+    -- Cost tracking
+    wall_time_seconds REAL,
+    prompt_tokens INT,
+    completion_tokens INT,
+    -- Reproducibility
+    model_version TEXT,
+    prompt_hash TEXT,
+    timestamp TIMESTAMP
+)
+
+-- Φ(n) curves (computed from submissions)
+phi_curves(
+    curve_id TEXT PRIMARY KEY,
+    experiment_id TEXT,
+    agent_id TEXT,
+    condition TEXT,
+    replicate INT,
+    -- Curve data
+    cumulative_scores JSON,          -- array of Φ(1), Φ(2), ..., Φ(N)
+    -- Fitted parameters
+    exponent_b REAL,
+    coefficient_a REAL,
+    b_ci_lower REAL,                 -- 95% CI
+    b_ci_upper REAL,
+    is_superlinear BOOLEAN
+)
+```
+
+### 10.2 Reproducibility Metadata
+
+Every run records: RNG seeds, code commit hash, model name + version string, full prompt text hash, timestamp, problem bank version hash, Python version, numpy version. Stored in the experiments table config JSON.
+
+---
+
+## 11. Prompt Architecture
+
+### 11.1 Solver System Prompt
+
+```
+You are a scientist analysing data from an unknown dynamical system.
+
+You will receive a time series of observations. The data may include 
+measurement noise. Your task is to apply mathematical reasoning to 
+answer the question asked.
+
+Approach this systematically:
+1. Examine the data: range, apparent structure, stationarity
+2. Compute what you can: return map shape, approximate periodicity, 
+   Lyapunov exponent estimate
+3. Form and test hypotheses about the generating system
+4. Answer the specific question with your best estimate and confidence
+
+Show your reasoning. If you're uncertain, say so and explain why.
+```
+
+### 11.2 Question-Specific Instructions
+
+Appended to the system prompt per question type:
+
+**CLASSIFY**:
+```
+Question: What dynamical regime does this system exhibit?
+Answer with exactly one of: chaotic, periodic, quasiperiodic, fixed_point, transient
+```
+
+**IDENTIFY**:
+```
+Question: What system family generated this data?
+The registry contains: logistic, tent, sine, henon, circle, rotation, damped_linear
+Answer with exactly one family name.
+Note: The system may have been transformed (e.g., rescaled or shifted) 
+but the underlying family is unchanged.
+```
+
+**ESTIMATE**:
+```
+Question: Estimate the system parameters.
+{family_specific_param_descriptions}
+Answer as JSON: {"param_name": value, ...}
+```
+
+**PREDICT**:
+```
+Question: Predict the next {K} values of the time series.
+Answer as a comma-separated list of {K} numbers.
+```
+
+**RECONSTRUCT**:
+```
+Question: What is the dimension of the state space generating this time series?
+The observations may be a projection from a higher-dimensional system.
+Answer with a single integer (1, 2, or 3).
+```
+
+**RELATE**:
+```
+Question: What is the relationship between these two time series?
+Series A: {data_A}
+Series B: {data_B}
+Answer with exactly one of: same_family_same_params, same_family_diff_params, 
+same_universality_class, conjugate, unrelated
+```
+
+### 11.3 Task History Format (Sequential Conditions)
+
+```
+=== Previous Tasks ===
+
+Task 1:
+  Data: [0.42, 0.91, 0.31, ...]  (first 20 values shown)
+  Question: CLASSIFY
+  Your answer: chaotic (confidence: 0.85)
+  Correct answer: chaotic ✓
+
+Task 2:
+  Data: [1.34, -0.12, 1.67, ...]  (first 20 values shown)
+  Question: IDENTIFY
+  Your answer: logistic (confidence: 0.7)
+  Correct answer: tent ✗
+
+=== Current Task ===
+...
+```
+
+Only the first 20 values of each past observation are included (token budget management). Full data is available only for the current problem. Total task history is capped at 3000 tokens; oldest tasks are dropped first.
+
+---
+
+## 12. Implementation Modules
+
+### 12.1 Module Map
+
+```
+chaosbench/
+├── grammar/
+│   ├── atoms.py            # Base classes + all atom implementations
+│   ├── connectives.py      # Affine conjugacy (v1), skew product (v1.5)
+│   ├── registry.py         # Atom/connective registry, parameter ranges
+│   └── system.py           # DynamicalSystem: compose, generate trajectory, metadata
+│
+├── problems/
+│   ├── factory.py           # system_spec → Problem with ground truth
+│   ├── bank.py              # Generate and manage fixed problem bank
+│   └── verification.py      # Per-question-type verify() functions
+│
+├── validation/
+│   ├── gates.py             # Stage 1: hard gates (permutation entropy, ACF, bounds)
+│   ├── baselines.py         # Stage 2: baseline battery (all naive strategies)
+│   └── oracle.py            # Oracle solver + random floor computation
+│
+├── experiment/
+│   ├── conditions.py        # Generate blocked/shuffled/independent orderings
+│   ├── runner.py            # Run experiment: iterate problems, call agents, score
+│   └── replication.py       # Multi-replicate experiment wrapper
+│
+├── scoring/
+│   ├── difficulty.py        # Composite difficulty computation
+│   ├── phi_curve.py         # Φ(n) computation, exponent fitting, CI estimation
+│   └── calibration.py       # ECE, Brier score for confidence evaluation
+│
+├── agents/
+│   ├── protocol.py          # Agent protocol definition
+│   ├── llm_agent.py         # Concrete LLM agent (Anthropic/OpenAI/Google)
+│   ├── prompts.py           # System prompts, question instructions, history formatting
+│   └── parsing.py           # Parse LLM output into structured answers
+│
+├── storage/
+│   ├── database.py          # SQLite read/write, schema creation
+│   └── reproducibility.py   # Seed management, commit hash, metadata logging
+│
+└── analysis/
+    ├── transfer.py          # Blocked vs shuffled statistical comparison
+    ├── mixed_effects.py     # Mixed-effects regression analysis
+    └── figures.py           # Φ(n) plots, per-type performance, calibration diagrams
+```
+
+### 12.2 Dependency Order (Build Sequence)
+
+```
+Phase 1: Mathematical core (no LLM, no API)
+  grammar/atoms.py → grammar/connectives.py → grammar/system.py → grammar/registry.py
+  problems/verification.py
+  scoring/difficulty.py
+  
+Phase 2: Problem generation and validation
+  problems/factory.py → problems/bank.py
+  validation/gates.py → validation/baselines.py → validation/oracle.py
+  storage/database.py → storage/reproducibility.py
+  
+Phase 3: Experiment infrastructure
+  experiment/conditions.py
+  agents/protocol.py → agents/prompts.py → agents/parsing.py
+  agents/llm_agent.py (requires API keys)
+  
+Phase 4: Run and analyse
+  experiment/runner.py → experiment/replication.py
+  scoring/phi_curve.py → scoring/calibration.py
+  analysis/transfer.py → analysis/mixed_effects.py → analysis/figures.py
+```
+
+Each phase is independently testable. Phase 1 requires only numpy/scipy. Phase 2 adds sqlite3. Phase 3 adds API clients. Phase 4 adds statsmodels and matplotlib.
+
+---
+
+## 13. Anti-Gaming
+
+### 13.1 Structural Anti-Gaming (Mathematical)
+
+Chaotic systems are structurally resistant to gaming:
+- **Memorisation fails**: The agent hasn't seen this specific trajectory from this specific initial condition. Small parameter differences → exponentially diverging trajectories.
+- **Statistical heuristics fail**: Mean reversion, persistence, AR models all fail beyond ~1 Lyapunov time.
+- **Lookup tables fail**: Continuous parameter space, continuous initial condition space. No finite table suffices.
+
+### 13.2 Contamination Mitigation
+
+- Non-standard parameter values only (no textbook r=4.0, μ=2.0, a=1.4)
+- Affine conjugacy changes the numerical range of the data
+- Monitor for suspiciously perfect identification: if an agent instantly identifies a system with confidence 1.0, flag for review
+- Include "novel" atoms (sine map, circle map) that are less likely to appear in training data alongside logistic/tent
+
+### 13.3 Validation Pipeline (§6)
+
+The three-stage validation ensures every problem is neither trivially solvable nor pathologically impossible. The baseline battery provides the empirical floor; the oracle provides the ceiling. Valid problems live between these bounds.
+
+---
+
+## 14. Future Extensions Roadmap
+
+### v1.1 (Post-paper improvements)
+
+- **Blind analysis mode**: Agent receives data first without knowing the question type. After submitting initial analysis, they receive the question. Tests general understanding vs targeted analysis.
+- **Multi-question per system**: Same system instance → CLASSIFY then IDENTIFY then PREDICT. Tests whether shallow analysis informs deeper analysis.
+- **Observation cost (Ψ metric)**: Agent can request additional observations at cost λ. Ψ(n) = Φ(n) - λ·(probes). Measures information efficiency.
+
+### v1.5 (Self-evolving tournament)
+
+- LLM proposer fills structured grammar templates
+- Three-stage validation including LLM review
+- Discrimination-based proposer scoring
+- Adaptive difficulty escalation
+- Skew product connective (two-layer reasoning chains)
+- Projection connective (partial observability)
+- Switching connective (piecewise systems)
+- CHARACTERIZE, BIFURCATE, SEGMENT question types
+
+### v2 (Full grammar)
+
+- Symmetric coupling, linear filter, nonlinear conjugacy connectives
+- 3+ layer reasoning chains
+- Tool-augmented mode (ANALYZE, HYPOTHESIZE, FIT tools)
+- DESIGN, CONJUGATE, CONTROL question types
+- Multi-agent collaboration with shared knowledge base
+- Grammar-aware DSL output mode
+
+### v3 (Meta-benchmark)
+
+- Full adversarial tournament (every agent proposes and solves)
+- Self-evolving grammar (new atom families added as agents master existing ones)
+- Cross-benchmark correlation study (ChaosBench vs MATH vs ARC vs GPQA)
+
+---
+
+## 15. Success Criteria
+
+### For the Benchmark
+
+- [ ] Produces reproducible Φ(n) curves across replicates (std of b < 0.1)
+- [ ] Baseline battery correctly rejects naive strategies on all problem types
+- [ ] Oracle score > best agent score > best baseline score > random floor (proper separation)
+- [ ] Grammar depth 1 problems are harder than depth 0 (lower mean raw_score)
+- [ ] At least one frontier model shows b > 1.05 on blocked condition
+
+### For the NeurIPS Paper
+
+- [ ] Clear evidence: blocked > shuffled (structural transfer exists, p < 0.05)
+- [ ] Characterisation of which question types show strongest transfer effects
+- [ ] Comparison across 2+ frontier model families with differential transfer capabilities
+- [ ] Publishable Φ(n) curves with confidence intervals
+- [ ] Anti-gaming analysis: formal argument + empirical demonstration
+- [ ] Novel difficulty grounding (composite difficulty with h_KS) — no other benchmark has this
+
+### For the Dissertation
+
+- All NeurIPS criteria, plus:
+- [ ] Reasoning trace analysis: what strategies do successful agents use?
+- [ ] Failure mode taxonomy: how do agents fail on each question type?
+- [ ] Cross-question transfer: does success on CLASSIFY improve IDENTIFY performance?
+- [ ] Depth effect: quantify the performance drop from depth 0 → depth 1
+- [ ] Calibration analysis: which models produce meaningful confidence estimates?
+
+---
+
+## 16. Known Risks and Mitigations
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| All models fail on depth-1 problems | Medium | Include enough depth-0 problems for meaningful Φ(n). Depth-1 failure is itself a finding. |
+| Pretraining contamination on standard families | High | Non-standard params + affine conjugacy + sine/circle atoms. Monitor for suspiciously perfect performance. |
+| Context window limits prevent sequential accumulation | Medium | Cap task history at 3000 tokens. Test with large-context models. Token budget is a controlled variable. |
+| Observation noise destroys all signal | Low | Start at σ=0.01, calibrate empirically. Include problems at multiple noise levels. |
+| Too few question types to measure transfer | Medium | 6 types across 4 tiers is sufficient. Cross-type transfer (CLASSIFY→IDENTIFY) is itself a research question. |
+| API cost exceeds budget | Medium | ~60 problems × 4 agents × 3 conditions × 5 replicates = ~3600 API calls for v1. At ~$0.03/call = ~$108. Manageable. |
+| Statistical power insufficient | Medium | Power analysis: with 60 problems and 5 replicates, detectable effect size for blocked vs shuffled is ~0.3 Cohen's d. Sufficient for medium effects. |
+| Parse failures on LLM output | Medium | Structured output format with fallback regex parsing. Log all raw outputs. Score parse failures as 0. |
+
+---
+
+## 17. Development Roadmap
+
+### Phase 1: Mathematical Core (Week 1)
+- `grammar/atoms.py`: All 7 v1 atoms with iterate(), lyapunov(), derivative()
+- `grammar/connectives.py`: Affine conjugacy
+- `grammar/system.py`: DynamicalSystem class — compose grammar, generate trajectory, compute metadata
+- `problems/verification.py`: All 6 verification functions
+- `scoring/difficulty.py`: Composite difficulty computation
+- Unit tests for every atom, every verification function, every edge case
+
+### Phase 2: Problem Bank and Validation (Week 1–2)
+- `problems/factory.py`: system_spec → Problem pipeline
+- `validation/gates.py`: Permutation entropy, ACF, bounds, periodicity screen
+- `validation/baselines.py`: All 9 baseline strategies
+- `validation/oracle.py`: Oracle solver + random floor
+- `problems/bank.py`: Generate full problem bank, run validation, freeze
+- `storage/database.py`: SQLite schema + read/write
+- `storage/reproducibility.py`: Seed management, metadata logging
+
+### Phase 3: Experiment Infrastructure (Week 2–3)
+- `experiment/conditions.py`: Blocked/shuffled/independent ordering generation
+- `agents/protocol.py` + `agents/prompts.py` + `agents/parsing.py`
+- `agents/llm_agent.py`: API wrappers with retry, rate limiting, cost tracking
+- `experiment/runner.py`: Full experiment loop (mock mode first, then live)
+- `experiment/replication.py`: Multi-replicate wrapper
+
+### Phase 4: First Live Run (Week 3)
+- Run with 2 models, 1 replicate, 20 problems (subset)
+- Validate: Φ(n) curves are computable, scoring is non-degenerate, parse rates acceptable
+- Debug, iterate, fix edge cases
+
+### Phase 5: Full Experiment (Week 3–4)
+- Full problem bank (~60–100 problems)
+- 4 agents × 3 conditions × 5 replicates
+- Store all results in SQLite
+
+### Phase 6: Analysis and Writing (Week 4–6)
+- `scoring/phi_curve.py` + `scoring/calibration.py`
+- `analysis/transfer.py` + `analysis/mixed_effects.py`
+- `analysis/figures.py`: Publication-quality plots
+- Draft NeurIPS submission
+
+---
+
+## Appendix A: Atom Specifications
+
+### A.1 Logistic Map
+```
+x_{n+1} = r · x_n · (1 - x_n)
+Domain: [0, 1]
+Parameters: r ∈ [2.5, 4.0]
+Derivative: f'(x) = r(1 - 2x)
+Lyapunov: λ = (1/N) Σ ln|r(1 - 2x_n)|
+Regimes: r < 3: fixed point. r ∈ [3, 3.57): period doubling. r > 3.57: mostly chaotic.
+```
+
+### A.2 Tent Map
+```
+x_{n+1} = μ · min(x_n, 1 - x_n)
+Domain: [0, 1]
+Parameters: μ ∈ [1.0, 2.0]
+Derivative: f'(x) = μ if x < 0.5, -μ if x > 0.5
+Lyapunov: λ = ln(μ)  (exact, parameter-only)
+Regimes: μ < 1: convergent. μ = 1: marginal. μ > 1: chaotic (no periodic windows for μ > 1).
+```
+
+### A.3 Sine Map
+```
+x_{n+1} = a · sin(π · x_n)
+Domain: [0, 1] for a ∈ (0, 1]
+Parameters: a ∈ [0.5, 1.0]
+Derivative: f'(x) = aπ · cos(πx)
+Lyapunov: λ = (1/N) Σ ln|aπ cos(πx_n)|
+Notes: Unimodal like logistic. Same universality class. Different functional form tests abstract recognition.
+```
+
+### A.4 Hénon Map
+```
+x_{n+1} = 1 - a·x_n² + y_n
+y_{n+1} = b·x_n
+Domain: attractor-dependent
+Parameters: a ∈ [1.0, 1.4], b ∈ [0.2, 0.4]
+Jacobian: [[−2ax, 1], [b, 0]]
+Lyapunov: via QR decomposition on Jacobian product
+Notes: 2D. When observed via x-component only, tests RECONSTRUCT.
+```
+
+### A.5 Circle Map
+```
+θ_{n+1} = θ_n + Ω - (K / 2π) · sin(2π · θ_n)  (mod 1)
+Domain: [0, 1) (circle)
+Parameters: Ω ∈ [0, 1], K ∈ [0, 1]
+Derivative: f'(θ) = 1 - K · cos(2πθ)
+Regimes: K < 1: diffeomorphism. Ω irrational: quasiperiodic. Ω rational: mode-locked.
+Notes: Primary source of quasiperiodic regime for CLASSIFY.
+```
+
+### A.6 Linear Rotation
+```
+x_{n+1} = x_n + ω  (mod 1)
+Domain: [0, 1)
+Parameters: ω ∈ (0, 1)
+Lyapunov: λ = 0 (exactly)
+Regimes: ω rational: periodic (period = denominator). ω irrational: quasiperiodic.
+Notes: Simplest non-chaotic atom. Foil.
+```
+
+### A.7 Damped Linear
+```
+x_{n+1} = λ · x_n
+Domain: ℝ
+Parameters: λ ∈ (0, 0.99)
+Lyapunov: λ_lyap = ln(λ) < 0
+Regime: Always converges to fixed point 0.
+Notes: Simplest convergent atom. Foil for CLASSIFY.
+```
+
+---
+
+## Appendix B: Affine Conjugacy Specification
+
+For any 1D atom f with domain [lo, hi]:
+
+```
+h(x) = a·x + b           (conjugacy)
+h_inv(y) = (y - b) / a   (inverse)
+
+Transformed dynamics:
+y_{n+1} = h(f(h_inv(y_n))) = a · f((y_n - b) / a) + b
+
+Constraints:
+  a ≠ 0  (invertibility)
+  |a| ∈ [0.5, 5.0]  (numerical stability)
+  |b| ∈ [0, 3.0]    (reasonable range)
+
+New domain: [a·lo + b, a·hi + b]  (if a > 0)
+           [a·hi + b, a·lo + b]  (if a < 0)
+```
+
+All dynamical invariants (Lyapunov exponent, h_KS, topological entropy, regime classification) are identical to the original system. Verification uses the original system's ground truth.

@@ -1,179 +1,117 @@
-# Task Plan: ChaosBench v4 Metacognitive Agent
+# Task Plan: ChaosBench v2 — Scientific Reasoning Benchmark
 
-**Goal**: Implement an LLM agent protocol that tests scientific reasoning via explicit metacognition on chaotic dynamical systems.
+**Goal**: Implement a benchmark measuring whether LLMs discover transferable structure across dynamical systems tasks, using multiple question types and blocked-vs-shuffled experimental design.
 
-**Hypothesis**: Superlinear Φ(t) = transfer learning; Linear Φ(t) = per-task heuristics
+**Master Spec**: `docs/Chaos_IMO` (PRD v2)
+
+**Core Hypothesis**: Superlinear Φ(n) in blocked condition vs linear in shuffled = structural transfer.
+
+**Headline Statistical Test**: Blocked vs Shuffled exponent b comparison (p < 0.05).
+
+---
+
+## MVP Scope (Section 1.1 of PRD)
+
+| Constraint | MVP | Full v1 |
+|------------|-----|---------|
+| Atoms | logistic, tent, damped_linear, rotation | + henon, sine, circle |
+| Grammar depth | 0 only | 0 + 1 (affine conjugacy) |
+| Question types | CLASSIFY, IDENTIFY, PREDICT | + ESTIMATE, RECONSTRUCT, RELATE |
+| Bank size | 36 (4×3×3) | 60-100 |
+| Conditions | blocked + shuffled | + independent |
+| Replicates | 3 per model-condition | 5 |
+
+**Success gate**: End-to-end pipeline with reproducible Φ(n) curves; blocked vs shuffled non-degenerate; at least one model beats best naive baseline on one family/question slice.
 
 ---
 
 ## Phases
 
-### Phase 1: Core Protocol ✅ COMPLETE
-- [x] AgentObservation / AgentAction dataclasses
-- [x] Session runner (task loop with PREDICT/WRITE/DELETE/MOVE_ON)
-- [x] LEARNINGS.md read/write/delete mechanics
-- [x] JSON action parsing from LLM output
-- [x] Trace logging (every turn, every task)
+### Phase 1: Mathematical Core `pending`
+**No LLM, no API. Pure math + tests.**
 
-### Phase 2: LLM Integration ✅ COMPLETE
-- [x] Gemini API wrapper (via LiteLLM)
-- [x] System prompt injection
-- [x] Message formatting (observations + learnings + feedback)
-- [x] Response parsing (reasoning + JSON action)
+- [ ] `grammar/atoms.py` — 4 MVP atoms: logistic, tent, damped_linear, rotation
+  - Each: `iterate()`, `lyapunov()`, `derivative()`
+  - Non-standard params mandatory (no textbook r=4.0, μ=2.0)
+  - Hard gates: λ_max > 0.01 for chaotic, periodicity screen, bound check
+- [ ] `grammar/connectives.py` — Affine conjugacy (stub for MVP, depth-0 only)
+- [ ] `grammar/system.py` — DynamicalSystem: compose grammar, generate trajectory, compute metadata (h_KS, λ_max, τ_λ, regime)
+- [ ] `grammar/registry.py` — Atom/connective registry, parameter ranges
+- [ ] `problems/verification.py` — 3 MVP verify functions: CLASSIFY (exact match), IDENTIFY (exact match), PREDICT (k_eff threshold)
+- [ ] `scoring/difficulty.py` — Composite difficulty: `(1 + h_KS) × (1 + depth) × (1 + 10σ)`
+- [ ] Unit tests for every atom, every verify function
 
-### Phase 3: Evaluation ✅ COMPLETE
-- [x] Φ(t) curve tracking
-- [x] Per-task metrics (attempts, time, final score)
-- [x] Session summary (total Φ, tasks completed, learnings size)
+### Phase 2: Problem Bank & Validation `pending`
+- [ ] `problems/factory.py` — system_spec → Problem with ground truth
+- [ ] `problems/bank.py` — Generate 36-task bank (4 families × 3 params × 3 questions), freeze
+- [ ] `validation/gates.py` — Stage 1: param bounds, trajectory stability, NaN/divergence, periodicity
+- [ ] `validation/baselines.py` — Stage 2: persistence, mean reversion, AR(5), statistical moments, return map NN
+- [ ] `validation/oracle.py` — Oracle solver + random floor computation
+- [ ] `storage/database.py` — SQLite schema (experiments, problems, orderings, submissions, phi_curves)
+- [ ] `storage/reproducibility.py` — Seed management, commit hash, metadata
 
-### Phase 4: Analysis `pending`
-- [ ] Trace viewer / pretty-printer
-- [ ] Learnings evolution over session
-- [ ] Transfer detection (did learnings help?)
+### Phase 3: Experiment Infrastructure `pending`
+- [ ] `experiment/conditions.py` — Blocked/shuffled ordering generation
+- [ ] `agents/protocol.py` — Agent protocol (solve(problem, history) → Solution)
+- [ ] `agents/prompts.py` — System prompt + question-specific instructions + task history format
+- [ ] `agents/parsing.py` — Parse LLM output into structured answers (with regex fallback)
+- [ ] `agents/llm_agent.py` — API wrappers (Anthropic/OpenAI/Google) with retry, rate limiting, cost tracking
+- [ ] `experiment/runner.py` — Full experiment loop (mock mode first, then live)
+- [ ] `experiment/replication.py` — Multi-replicate wrapper
 
-### Phase 5: Design Fix ✅ COMPLETE
-- [x] Identified feedback exploit (agent iterating toward revealed answer)
-- [x] Implemented blind prediction (no feedback until MOVE_ON)
-- [x] Added reflection phase (WRITE after seeing result)
-- [x] Debugged: Scores not perfect (0.22 avg), agent just never commits
-- [x] Root cause: Blind guessing isn't scientific reasoning
+### Phase 4: First Live Run `pending`
+- [ ] Run with 2 models, 1 replicate, ~20 problems (subset)
+- [ ] Validate: Φ(n) curves computable, scoring non-degenerate, parse rates acceptable
+- [ ] Debug, iterate, fix edge cases
+- [ ] Verify: oracle > agent > baseline > random (proper separation)
 
-### Phase 6: Hypothesis-Driven Redesign ✅ COMPLETE
-**Insight:** Real science involves testing hypotheses against data, not blind guessing.
+### Phase 5: Full Experiment `pending`
+- [ ] Full 36-task bank
+- [ ] 2+ models × 2 conditions × 3 replicates
+- [ ] Store all results in SQLite
+- [ ] Add independent condition if pipeline stable
 
-New actions:
-- [x] Design HYPOTHESIZE action (test model against observations)
-- [x] Design FIT action (auto-fit parameters)
-- [x] Implement `chaosbench/core/models.py` (model factory)
-- [x] Implement `chaosbench/core/backtest.py` (~60 lines)
-- [x] Implement `chaosbench/core/fitting.py` (~80 lines)
-- [x] Add new action types to `metacognitive_types.py`
-- [x] Add handlers to `session.py`
-- [x] Update system prompt (`hypothesis_system.txt`)
-- [x] Unit tests for models/backtest/fitting (13 tests)
-- [x] Integration test (2 tests)
-- [x] All 76 chaosbench tests pass
-
-**Feedback format (minimal):**
-```
-Model: logistic (r=3.7)
-
-Backtest (fitting x_0 → x_49):
-  MAE: 0.147
-  Your model doesn't reproduce the observations well.
-
-If you trust this model, it predicts x_50 = 0.394
-```
-
-**Experimental design:**
-- Phase A: Scaffolded (HYPOTHESIZE, FIT provided)
-- Phase B: CODE only (see if agents discover strategy)
-- Phase C: Analyze the gap
+### Phase 6: Analysis & Writing `pending`
+- [ ] `scoring/phi_curve.py` — Φ(n) computation, exponent fitting (a·n^b), bootstrap CIs
+- [ ] `analysis/transfer.py` — Blocked vs shuffled statistical comparison
+- [ ] `analysis/figures.py` — Publication-quality Φ(n) plots with CIs
+- [ ] Reasoning trace analysis
+- [ ] Draft results section
 
 ---
 
-## Implementation Status
+## Key Architecture Decisions
 
-### Existing (Scaffolded Version — Deferred to v1.2)
-| Component | File | Status |
-|-----------|------|--------|
-| Data Types | `chaosbench/agents/metacognitive_types.py` | ✅ Done |
-| Learnings | `chaosbench/agents/learnings.py` | ✅ Done |
-| Session Runner | `chaosbench/experiments/session.py` | ✅ Done |
-| Model Factory | `chaosbench/core/models.py` | ✅ Done |
-| Backtest | `chaosbench/core/backtest.py` | ✅ Done |
-| Fitting | `chaosbench/core/fitting.py` | ✅ Done |
-
-### MVP v1 ✅ IMPLEMENTED
-| Component | File | Status |
-|-----------|------|--------|
-| Scoring (NLL) | `chaosbench/core/scoring.py` | ✅ Done |
-| Chaotic Systems | `chaosbench/core/Chaosbench_v3.py` | ✅ Done (logistic r=4 only) |
-| Session Runner | `chaosbench/experiments/session.py` | ✅ Done (auto-advance) |
-| MVP Prompt | `chaosbench/prompts/mvp_system.txt` | ✅ Done |
-| Task Visualization | `chaosbench/visualization/plots.py` | ✅ Done (bins overlay) |
-| CLI | `chaosbench/run_metacognitive.py` | ✅ Done (--save-task-plots) |
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Agent interface | Raw mode (no tools, no DSL) | Performance = reasoning capability, not engineering |
+| Scoring | Per-question verify → raw_score × difficulty | Composite difficulty handles non-chaotic systems (h_KS=0) |
+| Transfer detection | Φ(n) = a·n^b, report b with 95% CI | Superlinear b > 1.05 = transfer |
+| Anti-gaming | Non-standard params + noise + validation pipeline | Memorization fails on novel params |
+| Storage | SQLite | Reproducible, queryable, single file |
+| Conditions | Blocked vs Shuffled (headline), Independent (secondary) | Blocked-Shuffled gap = structural transfer |
 
 ---
 
-## Key Decisions
+## Relationship to Previous Work
 
-### MVP (v1)
-| Decision | Choice | Status |
-|----------|--------|--------|
-| Actions | **PREDICT, MOVE_ON only** | ✅ |
-| Systems | Logistic, Tent (1D) | ✅ |
-| Output | Point ± σ → Gaussian → NLL | ✅ |
-| Metrics | Φ(n), T(n) by task index | ✅ |
-| Bins | 20 uniform over [0, 1] | ✅ |
-| Feedback | Actual value after PREDICT | ✅ |
+The old metacognitive agent approach (Phases 1-8 in old plan) explored:
+- Single-task prediction (PREDICT only)
+- NLL bin scoring for [0,1] systems
+- HYPOTHESIZE/FIT scaffolding
 
-### Future (v1.2+)
-| Decision | Choice | Status |
-|----------|--------|--------|
-| Scaffolding | HYPOTHESIZE, FIT | Planned |
-| Learnings | WRITE, DELETE | Planned |
-| Retry logic | Multiple PREDICT per task | Planned |
+**Lessons carried forward:**
+- LLMs anchor on example values in prompts → use placeholders
+- Tent map μ=2 degenerates → use non-standard params + stability validation
+- NLL bin scoring breaks for non-[0,1] systems → use k_eff + exact match instead
+- Auto-advance after action → simpler protocol
 
----
-
-## Current Work: MVP Implementation
-
-**Phase 6 Complete.** Hypothesis-driven framework exists but is deferred to v1.2.
-
-**MVP Focus (v1):**
-1. Agent sees observations [x_0, ..., x_49]
-2. Agent outputs prediction (value ± σ)
-3. System scores via NLL
-4. Agent sees actual value
-5. Next task
-6. Measure Φ(n) for superlinearity
-
-### Phase 7: Minimal Benchmark v1 (MVP) ✅ COMPLETE
-**Goal:** Simplest possible benchmark — observations in, prediction out, measure Φ(n).
-
-**MVP Scope:**
-- **Actions:** PREDICT only (auto-advances after prediction)
-- **Systems:** Logistic r=4 only (tent removed due to numerical instability)
-- **Output:** Point estimate → Gaussian σ=0.1 → NLL over 20 bins
-- **Metrics:** Φ(n) by task index
-- **No scaffolding:** No HYPOTHESIZE, no FIT, no WRITE
-
-**Implementation Complete:**
-- [x] NLL Scoring: `chaosbench/core/scoring.py` (truncated Gaussian over 20 bins)
-- [x] Chaotic Systems: `create_chaotic_system()`, `get_chaotic_systems()` in Chaosbench_v3.py
-- [x] Session Runner: Auto-advance after PREDICT, NLL integration
-- [x] MVP Prompt: `chaosbench/prompts/mvp_system.txt`
-- [x] Visualization: `plot_task()` with bins overlay
-
-**Bugs Fixed:**
-- Tent map numerical instability → Removed
-- MOVE_ON never called → Auto-advance after PREDICT
-- Anchoring on example 0.42 → Use `<your_prediction>` placeholder
-
-**Test Results (Gemini 2.0 Flash, 5 tasks):**
-- Final Phi: 0.08
-- Varied predictions (not anchored)
-- Protocol working correctly
-
-**Future extensions (not MVP):**
-- v1.1: Retry logic (multiple PREDICT before MOVE_ON)
-- v1.2: Scaffolding (HYPOTHESIZE, FIT)
-- v1.3: Learnings notepad (WRITE, DELETE)
-
-### Phase 8: Run MVP Experiments 🔧 NEXT
-- [x] Initial test run (Gemini 2.0 Flash, 5 tasks) — Working
-- [ ] Run larger sessions (50+ tasks) to see Φ(n) curve shape
-- [ ] Test with different LLMs (Claude, GPT-4)
-- [ ] Vary difficulty: horizon × noise grid
-- [ ] Analyze Φ(n) shape for superlinearity
-- [ ] Baseline comparison (random, mean reversion)
-
-### Phase 9: Scaffolding Comparison `future`
-- [ ] Implement v1.2 (add HYPOTHESIZE/FIT)
-- [ ] Run same tasks with scaffolding
-- [ ] Compare Φ(n) curves: MVP vs Scaffolded
-- [ ] Measure value of explicit scientific tools
+**What changes:**
+- Multiple question types (not just PREDICT)
+- Grammar system (not just raw systems)
+- Validation pipeline (baselines prove problems aren't trivial)
+- Experimental conditions (blocked/shuffled/independent)
+- SQLite storage (not JSON files)
 
 ---
 
@@ -181,8 +119,8 @@ If you trust this model, it predicts x_50 = 0.394
 
 | Doc | Purpose |
 |-----|---------|
-| **`2026-01-31-chaosbench-v1-minimal-design.md`** | MVP specification (current) |
-| `2026-01-30-chaosbench-metacognitive-agent-design.md` | Scaffolded version (v1.2) |
-| `2026-01-30-hypothesis-testing.md` | HYPOTHESIZE/FIT implementation |
-| `chaosbench-v4-findings.md` | Research decisions and rationale |
-| `chaosbench-v4-progress.md` | Session-by-session log |
+| **`docs/Chaos_IMO`** | Master PRD v2 specification |
+| `docs/plans/chaosbench-v4-findings.md` | Research decisions and lessons learned |
+| `docs/plans/chaosbench-v4-progress.md` | Session-by-session log |
+| `docs/plans/2026-01-31-chaosbench-v1-minimal-design.md` | Old MVP spec (historical reference) |
+| `chaosbench/core/ChaosSpecification.md` | Old math spec (partial overlap with PRD) |
