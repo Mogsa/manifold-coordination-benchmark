@@ -288,3 +288,138 @@ See `docs/plans/2026-01-30-metacognitive-agent-status.md` for full details.
 ---
 
 *Last updated: 2026-01-30 (mid-session, debugging blind prediction)*
+
+---
+
+## ChaosBench v2: The Rebuild (2026-02-06)
+
+### Why v2? The v1 Autopsy
+
+v1 had a metacognitive agent that was supposed to "learn" about chaotic systems over time. Three problems killed it:
+
+1. **Prompt anchoring** — Agent would copy concrete numeric examples from the system prompt and predict those. Garbage in, garbage out.
+2. **Scaffolding obscured signal** — The HYPOTHESIZE/FIT/PREDICT tool loop was so complex that it was impossible to tell if the agent was *reasoning* or just *following instructions*.
+3. **NLL scoring was gameable** — Agent learned that predicting the mean always gives a decent NLL score. Mean reversion isn't intelligence.
+
+**The v2 philosophy:** Strip everything back. Three simple question types (CLASSIFY, IDENTIFY, PREDICT). No metacognitive scaffolding. Raw reasoning ability, directly measured.
+
+### Architecture: The Grammar of Chaos
+
+Think of it like linguistics. Atoms are words, connectives (post-MVP) are grammar rules:
+
+```
+Atom (logistic, tent, damped_linear, rotation)
+  ↓ iterate(), derivative(), lyapunov(), regime()
+DynamicalSystem (wraps atom + observation model)
+  ↓ observe(), future_trajectory()
+Problem (system + question type + ground truth)
+  ↓ verified by gates + baselines
+Bank (collection of validated problems)
+```
+
+**Why this separation?** Because each layer has a different rate of change:
+- Atoms are mathematical facts (never change)
+- Systems add experimental noise (tune for difficulty)
+- Problems add questions (swap out for different experiments)
+- Banks add validation (ensure quality)
+
+### The Parameter Selection Story
+
+This one's worth remembering. Our first attempt used r=3.831 for the "chaotic" logistic problem. Turns out r=3.831 falls *exactly* in the period-3 window — it's periodic, not chaotic (λ=-0.37). This is the Sharkovskii theorem in action: period-3 implies chaos, but the *window* of period-3 stability is a gap in the chaotic band.
+
+**Lesson:** Never trust round numbers for chaotic systems. We verified r=3.891 numerically (λ≈0.49) and hard-coded it.
+
+Similarly, tent map mu=2.0 causes degeneration (every orbit eventually maps to zero). That was a v1 bug that cost hours of debugging. v2 hard-caps at mu≤1.95.
+
+### The ACF Gate Surprise
+
+We set the autocorrelation gate threshold at 0.05 (expecting chaotic systems to have near-zero ACF at lag 1). The logistic map at r=3.891 has ACF(1)≈-0.53. This is *correct* — chaotic logistic maps below r=4 have strong negative lag-1 autocorrelation. It's only at r=4 (the fully chaotic case) that ACF drops to near-zero.
+
+**Fix:** Raised threshold to 0.95. The gate's real purpose is to catch periodic/fixed-point trajectories being mislabelled as chaotic, not to be a chaos detector. The Lyapunov + PE gates handle the actual chaos verification.
+
+**Lesson for the dissertation:** "Chaotic" doesn't mean "random-looking." Chaos has structure — it's deterministic complexity, not noise. The negative ACF in the logistic map reflects the stretching-and-folding that defines chaos.
+
+### What We Built (Phase 1-2 Summary)
+
+| Module | Files | What It Does |
+|--------|-------|-------------|
+| `grammar/` | atoms, registry, system, connectives | 4 atoms with analytical properties, factory, observation model |
+| `problems/` | verification, factory, bank | 3 verifiers, problem generator, 36-problem mini-bank |
+| `scoring/` | difficulty | Composite difficulty: (1+h_ks)(1+depth)(1+10σ) |
+| `validation/` | gates, baselines | 7 quality gates + 5 baselines for sanity checking |
+| `tests/` | 8 new test files | 107 new tests, all passing |
+
+**Result:** 36 problems generated, 24 validated (67% pass rate). All 4 families × 3 question types represented. Bank frozen to JSON.
+
+### Key Numbers
+
+- 146 total tests pass (107 new + 39 existing)
+- 24/36 problems validated
+- Difficulty range: 1.10 (damped linear, classify) to 1.80 (tent mu=1.574, classify)
+- Zero regressions on existing lyapunov tests
+
+### What's Next
+
+Phase 4-5: Baselines, experiment analysis. The foundation and Gemini agent are ready — now we run experiments and interpret results.
+
+*Updated: 2026-02-06 (Phase 1-2 complete, all tests green)*
+
+---
+
+## Phase 3: Gemini Solver + Quick Runner (2026-02-06)
+
+### What We Built
+
+Five source files and two test files to send problems to Gemini and get scored results:
+
+| File | Purpose |
+|------|---------|
+| `agents/protocol.py` | `Solution`, `TaskResult` dataclasses + `Agent` protocol |
+| `agents/prompts.py` | System prompt (no anchoring!) + per-problem user prompt |
+| `agents/parsing.py` | Extract CLASSIFY/IDENTIFY/PREDICT answers from LLM responses |
+| `agents/llm_agent.py` | Concrete `LLMAgent` wrapping `shared.llm_utils.call_llm` |
+| `experiment/runner.py` | Load bank, run agent, score, print summary |
+
+### The Parsing Problem
+
+LLMs don't give you structured output — they give you essays with an answer buried somewhere. Our parser uses a three-tier strategy:
+
+1. **ANSWER: line** — If the agent follows instructions, great. Extract from there.
+2. **Pattern matching** — Look for known labels / bracketed lists / comma-separated numbers.
+3. **Fallback** — Grab whatever floats exist in the response.
+
+The key insight: **never crash on bad output**. Return empty string / empty list, score it as 0, log the raw response for debugging. A single API failure shouldn't kill a 27-problem run.
+
+### The "quasiperiodic" Bug
+
+First test run had a subtle bug: "periodic" is a substring of "quasiperiodic". When scanning the ANSWER line for known labels, "periodic" matched before "quasiperiodic" was checked.
+
+**Fix:** Sort labels longest-first before scanning. This is a general lesson: when matching against a set of patterns where one is a substring of another, check the longer one first.
+
+### Design Decisions Worth Remembering
+
+1. **Reused `shared.llm_utils.call_llm` directly** — No new LLM wrapper. It has retry logic, .env loading, supports gemini/ prefix via LiteLLM. Don't reinvent.
+
+2. **Task history is empty in MVP** — The protocol supports passing previous task results to the agent (sequential condition), but MVP uses independent mode (empty list). Sequential experiments are Phase 5.
+
+3. **No concrete numeric examples in system prompt** — v1's fatal flaw was putting example numbers in prompts; the agent would anchor on them and predict those numbers. v2 system prompt says "think step by step" and nothing more specific.
+
+4. **Loading from frozen JSON skips system_metadata/observation_detail** — The runner only needs observations, ground truth, and metadata. We set the heavy objects to `None` and move on. Full Problem reconstruction from JSON would require re-running the atoms, which is wasteful for evaluation.
+
+### Running It
+
+```bash
+# Unit tests (no API calls)
+pytest chaosbench/tests/test_parsing.py chaosbench/tests/test_runner.py -v
+
+# Live run (costs ~$0.05)
+python -m chaosbench.experiment.runner
+```
+
+### Numbers
+
+- 44 new tests, all passing
+- 92 total tests (44 new + 48 existing), zero regressions
+- 27 problems in the bank ready for Gemini
+
+*Updated: 2026-02-06 (Phase 3 complete, ready for live Gemini run)*

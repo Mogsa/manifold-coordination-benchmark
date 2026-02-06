@@ -23,7 +23,7 @@
 
 ## MVP Design
 
-### The Simplest Possible Benchmark
+### The Simplest Possible Benchmarkl
 
 ```
 Agent sees: [x_0, x_1, ..., x_49]
