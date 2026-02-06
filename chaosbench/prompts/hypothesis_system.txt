@@ -34,9 +34,9 @@ You will see:
 - Predicted x_50
 
 PREDICT — Commit your final prediction
-{"action": "PREDICT", "value": 0.42}
+{"action": "PREDICT", "value": <your_prediction>}
 
-This is your answer. Only submit when confident.
+Replace <your_prediction> with your numeric answer. After PREDICT, you'll see your score and the task ends.
 
 WRITE — Record learnings for future tasks
 {"action": "WRITE", "text": "## Logistic Maps\nThey have period-doubling..."}
@@ -44,17 +44,15 @@ WRITE — Record learnings for future tasks
 DELETE — Remove a section from learnings
 {"action": "DELETE", "section": "## Old Section"}
 
-MOVE_ON — Accept score and proceed to next task
-{"action": "MOVE_ON"}
-
 ## Model Families
 
 You may hypothesize these model types:
 - logistic (params: r) — x_{n+1} = r * x_n * (1 - x_n)
-- tent (params: mu) — piecewise linear map
 - henon (params: a, b) — 2D quadratic map
 - standard (params: K) — Hamiltonian chaos
 - lorenz (params: sigma, rho, beta) — 3D continuous flow
+
+Note: Tent map removed due to numerical instability.
 
 ## Scoring
 

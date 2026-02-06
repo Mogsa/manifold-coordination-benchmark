@@ -38,19 +38,21 @@
 - [x] Debugged: Scores not perfect (0.22 avg), agent just never commits
 - [x] Root cause: Blind guessing isn't scientific reasoning
 
-### Phase 6: Hypothesis-Driven Redesign 🔧 IN PROGRESS
+### Phase 6: Hypothesis-Driven Redesign ✅ COMPLETE
 **Insight:** Real science involves testing hypotheses against data, not blind guessing.
 
 New actions:
 - [x] Design HYPOTHESIZE action (test model against observations)
 - [x] Design FIT action (auto-fit parameters)
-- [ ] Implement `chaosbench/core/backtest.py` (~60 lines)
-- [ ] Implement `chaosbench/core/fitting.py` (~80 lines)
-- [ ] Add new action types to `metacognitive_types.py`
-- [ ] Add handlers to `session.py`
-- [ ] Update system prompt
-- [ ] Unit tests for backtest/fitting
-- [ ] Integration test
+- [x] Implement `chaosbench/core/models.py` (model factory)
+- [x] Implement `chaosbench/core/backtest.py` (~60 lines)
+- [x] Implement `chaosbench/core/fitting.py` (~80 lines)
+- [x] Add new action types to `metacognitive_types.py`
+- [x] Add handlers to `session.py`
+- [x] Update system prompt (`hypothesis_system.txt`)
+- [x] Unit tests for models/backtest/fitting (13 tests)
+- [x] Integration test (2 tests)
+- [x] All 76 chaosbench tests pass
 
 **Feedback format (minimal):**
 ```
@@ -72,55 +74,115 @@ If you trust this model, it predicts x_50 = 0.394
 
 ## Implementation Status
 
+### Existing (Scaffolded Version — Deferred to v1.2)
 | Component | File | Status |
 |-----------|------|--------|
-| Data Types | `chaosbench/agents/metacognitive_types.py` | ✅ Done (needs HYPOTHESIZE/FIT) |
+| Data Types | `chaosbench/agents/metacognitive_types.py` | ✅ Done |
 | Learnings | `chaosbench/agents/learnings.py` | ✅ Done |
-| Trace Logger | `chaosbench/experiments/trace.py` | ✅ Done |
-| Session Runner | `chaosbench/experiments/session.py` | ✅ Done (needs new handlers) |
-| LLM Agent | `chaosbench/agents/metacognitive_agent.py` | ✅ Done |
-| CLI Runner | `chaosbench/run_metacognitive.py` | ✅ Done |
-| System Prompt | `chaosbench/prompts/metacognitive_system.txt` | ✅ Done (needs hypothesis update) |
-| Integration Test | `chaosbench/tests/test_integration.py` | ✅ Done |
-| **Backtest** | `chaosbench/core/backtest.py` | 🆕 Not started |
-| **Fitting** | `chaosbench/core/fitting.py` | 🆕 Not started |
-| **Hypothesis Prompt** | `chaosbench/prompts/hypothesis_system.txt` | 🆕 Not started |
+| Session Runner | `chaosbench/experiments/session.py` | ✅ Done |
+| Model Factory | `chaosbench/core/models.py` | ✅ Done |
+| Backtest | `chaosbench/core/backtest.py` | ✅ Done |
+| Fitting | `chaosbench/core/fitting.py` | ✅ Done |
+
+### MVP v1 ✅ IMPLEMENTED
+| Component | File | Status |
+|-----------|------|--------|
+| Scoring (NLL) | `chaosbench/core/scoring.py` | ✅ Done |
+| Chaotic Systems | `chaosbench/core/Chaosbench_v3.py` | ✅ Done (logistic r=4 only) |
+| Session Runner | `chaosbench/experiments/session.py` | ✅ Done (auto-advance) |
+| MVP Prompt | `chaosbench/prompts/mvp_system.txt` | ✅ Done |
+| Task Visualization | `chaosbench/visualization/plots.py` | ✅ Done (bins overlay) |
+| CLI | `chaosbench/run_metacognitive.py` | ✅ Done (--save-task-plots) |
 
 ---
 
 ## Key Decisions
 
+### MVP (v1)
 | Decision | Choice | Status |
 |----------|--------|--------|
-| Retry policy | Agent decides, time cost | ✅ |
-| Score counting | Last prediction before MOVE_ON | ✅ |
-| Feedback | ~~After each PREDICT~~ → Backtest on known data | 🔧 Redesigned |
-| Observations | Passive — 50 given upfront (v1.0) | ✅ |
-| Actions | PREDICT, WRITE, DELETE, MOVE_ON, **HYPOTHESIZE, FIT** | 🔧 Expanded |
-| Action format | JSON | ✅ |
-| x_50 visibility | Hidden until PREDICT commit | ✅ |
-| Backtest feedback | MAE + quality message + predicted x_50 | 🆕 |
+| Actions | **PREDICT, MOVE_ON only** | ✅ |
+| Systems | Logistic, Tent (1D) | ✅ |
+| Output | Point ± σ → Gaussian → NLL | ✅ |
+| Metrics | Φ(n), T(n) by task index | ✅ |
+| Bins | 20 uniform over [0, 1] | ✅ |
+| Feedback | Actual value after PREDICT | ✅ |
+
+### Future (v1.2+)
+| Decision | Choice | Status |
+|----------|--------|--------|
+| Scaffolding | HYPOTHESIZE, FIT | Planned |
+| Learnings | WRITE, DELETE | Planned |
+| Retry logic | Multiple PREDICT per task | Planned |
 
 ---
 
-## Current Work: Hypothesis-Driven Redesign
+## Current Work: MVP Implementation
 
-**Problem solved:** Blind guessing isn't scientific reasoning. Agent can't learn without feedback loop.
+**Phase 6 Complete.** Hypothesis-driven framework exists but is deferred to v1.2.
 
-**Solution:** Let agent test models against KNOWN data (x_0...x_49), then extrapolate to x_50.
+**MVP Focus (v1):**
+1. Agent sees observations [x_0, ..., x_49]
+2. Agent outputs prediction (value ± σ)
+3. System scores via NLL
+4. Agent sees actual value
+5. Next task
+6. Measure Φ(n) for superlinearity
 
-**The loop:**
-1. Agent proposes model (e.g., "logistic r=3.85")
-2. System backtests against observations, reports MAE
-3. Agent refines or tries different model
-4. When satisfied, agent commits prediction
-5. Only then x_50 revealed
+### Phase 7: Minimal Benchmark v1 (MVP) ✅ COMPLETE
+**Goal:** Simplest possible benchmark — observations in, prediction out, measure Φ(n).
 
-This mirrors real science: fit model to existing data, extrapolate to unknown.
+**MVP Scope:**
+- **Actions:** PREDICT only (auto-advances after prediction)
+- **Systems:** Logistic r=4 only (tent removed due to numerical instability)
+- **Output:** Point estimate → Gaussian σ=0.1 → NLL over 20 bins
+- **Metrics:** Φ(n) by task index
+- **No scaffolding:** No HYPOTHESIZE, no FIT, no WRITE
+
+**Implementation Complete:**
+- [x] NLL Scoring: `chaosbench/core/scoring.py` (truncated Gaussian over 20 bins)
+- [x] Chaotic Systems: `create_chaotic_system()`, `get_chaotic_systems()` in Chaosbench_v3.py
+- [x] Session Runner: Auto-advance after PREDICT, NLL integration
+- [x] MVP Prompt: `chaosbench/prompts/mvp_system.txt`
+- [x] Visualization: `plot_task()` with bins overlay
+
+**Bugs Fixed:**
+- Tent map numerical instability → Removed
+- MOVE_ON never called → Auto-advance after PREDICT
+- Anchoring on example 0.42 → Use `<your_prediction>` placeholder
+
+**Test Results (Gemini 2.0 Flash, 5 tasks):**
+- Final Phi: 0.08
+- Varied predictions (not anchored)
+- Protocol working correctly
+
+**Future extensions (not MVP):**
+- v1.1: Retry logic (multiple PREDICT before MOVE_ON)
+- v1.2: Scaffolding (HYPOTHESIZE, FIT)
+- v1.3: Learnings notepad (WRITE, DELETE)
+
+### Phase 8: Run MVP Experiments 🔧 NEXT
+- [x] Initial test run (Gemini 2.0 Flash, 5 tasks) — Working
+- [ ] Run larger sessions (50+ tasks) to see Φ(n) curve shape
+- [ ] Test with different LLMs (Claude, GPT-4)
+- [ ] Vary difficulty: horizon × noise grid
+- [ ] Analyze Φ(n) shape for superlinearity
+- [ ] Baseline comparison (random, mean reversion)
+
+### Phase 9: Scaffolding Comparison `future`
+- [ ] Implement v1.2 (add HYPOTHESIZE/FIT)
+- [ ] Run same tasks with scaffolding
+- [ ] Compare Φ(n) curves: MVP vs Scaffolded
+- [ ] Measure value of explicit scientific tools
 
 ---
 
-## Design Doc
+## Design Docs
 
-Full specification: `docs/plans/2026-01-30-chaosbench-metacognitive-agent-design.md`
-Status doc: `docs/plans/2026-01-30-metacognitive-agent-status.md`
+| Doc | Purpose |
+|-----|---------|
+| **`2026-01-31-chaosbench-v1-minimal-design.md`** | MVP specification (current) |
+| `2026-01-30-chaosbench-metacognitive-agent-design.md` | Scaffolded version (v1.2) |
+| `2026-01-30-hypothesis-testing.md` | HYPOTHESIZE/FIT implementation |
+| `chaosbench-v4-findings.md` | Research decisions and rationale |
+| `chaosbench-v4-progress.md` | Session-by-session log |
