@@ -2,13 +2,13 @@
 import pytest
 from unittest.mock import patch
 
-from chaosbench.experiments.session import SessionRunner, SessionConfig
-from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
+from chaosbench.legacy_v0.experiments.session import SessionRunner, SessionConfig
+from chaosbench.legacy_v0.agents.metacognitive_agent import MetacognitiveAgent
 
 
 @pytest.mark.integration
 class TestFullSession:
-    @patch('chaosbench.agents.metacognitive_agent.call_llm')
+    @patch("chaosbench.legacy_v0.agents.metacognitive_agent.call_llm")
     def test_full_session_with_mock_llm(self, mock_llm):
         """Run a full session with mocked LLM responses."""
         # Simulate agent behavior: predict, learn, move on

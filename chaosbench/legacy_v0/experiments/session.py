@@ -11,17 +11,17 @@ from chaosbench.core.Chaosbench_v3 import (
     DifficultyWeighting,
     get_chaotic_systems,
 )
-from chaosbench.core.scoring import compute_score
-from chaosbench.agents.metacognitive_types import (
+from chaosbench.legacy_v0.scoring import compute_score
+from chaosbench.legacy_v0.agents.metacognitive_types import (
     AgentObservation,
     AgentAction,
     Feedback,
     BacktestFeedback,
 )
-from chaosbench.core.backtest import backtest_model
-from chaosbench.core.fitting import fit_model
-from chaosbench.agents.learnings import LearningsManager
-from chaosbench.experiments.trace import TraceLogger
+from chaosbench.legacy_v0.backtest import backtest_model
+from chaosbench.legacy_v0.fitting import fit_model
+from chaosbench.legacy_v0.agents.learnings import LearningsManager
+from chaosbench.legacy_v0.experiments.trace import TraceLogger
 
 
 @dataclass

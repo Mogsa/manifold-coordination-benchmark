@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Tuple
 
 from shared.llm_utils import call_llm
-from chaosbench.agents.metacognitive_types import (
+from chaosbench.legacy_v0.agents.metacognitive_types import (
     AgentObservation,
     AgentAction,
     parse_action,

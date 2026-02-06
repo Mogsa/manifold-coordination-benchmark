@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 from unittest.mock import patch, Mock
 
-from chaosbench.experiments.session import SessionRunner, SessionConfig
-from chaosbench.agents.metacognitive_types import AgentAction
+from chaosbench.legacy_v0.experiments.session import SessionRunner, SessionConfig
+from chaosbench.legacy_v0.agents.metacognitive_types import AgentAction
 
 
 class MockHypothesisAgent:

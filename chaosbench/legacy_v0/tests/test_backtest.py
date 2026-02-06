@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 
-from chaosbench.core.backtest import backtest_model, BacktestResult
+from chaosbench.legacy_v0.backtest import backtest_model, BacktestResult
 
 
 class TestBacktestModel:

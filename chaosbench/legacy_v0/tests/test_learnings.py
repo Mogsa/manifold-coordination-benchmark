@@ -1,6 +1,6 @@
 """Tests for learnings manager."""
 import pytest
-from chaosbench.agents.learnings import LearningsManager
+from chaosbench.legacy_v0.agents.learnings import LearningsManager
 
 
 class TestLearningsManager:

@@ -27,27 +27,16 @@ htmlcov/
 # Environment variables
 .env
 
-# Results and data
-results/*.json
-results/*.csv
-results/*/
-!results/.gitkeep
+# Results — track structure, ignore large generated files
+results/**/*.png
+results/**/*.json
+results/**/*.csv
 
 # Jupyter
 .ipynb_checkpoints/
 
 # macOS
 .DS_Store
-.env
 
 # Ralph automation (local only)
 .ralph/
-
-# ChaosBench generated plots
-phi_curves.png
-nll_vs_difficulty.png
-accuracy_by_difficulty.png
-weighting_comparison.png
-conditional_comparison.png
-observability_analysis.png
-complexity_spectrum.png

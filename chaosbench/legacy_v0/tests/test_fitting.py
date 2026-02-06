@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 
-from chaosbench.core.fitting import fit_model, FitResult
+from chaosbench.legacy_v0.fitting import fit_model, FitResult
 
 
 class TestFitModel:

@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 from unittest.mock import patch, Mock
 
-from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
-from chaosbench.agents.metacognitive_types import AgentObservation, Feedback
+from chaosbench.legacy_v0.agents.metacognitive_agent import MetacognitiveAgent
+from chaosbench.legacy_v0.agents.metacognitive_types import AgentObservation, Feedback
 
 
 class TestMetacognitiveAgent:
@@ -49,7 +49,7 @@ class TestMetacognitiveAgent:
         assert "0.3" in message  # actual
         assert "0.6" in message  # score
 
-    @patch('chaosbench.agents.metacognitive_agent.call_llm')
+    @patch("chaosbench.legacy_v0.agents.metacognitive_agent.call_llm")
     def test_call_returns_action(self, mock_llm):
         """Test that agent call returns reasoning and action."""
         mock_llm.return_value = '''Looking at the pattern, values oscillate.

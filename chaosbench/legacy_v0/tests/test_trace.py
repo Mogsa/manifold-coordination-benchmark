@@ -1,7 +1,7 @@
 """Tests for trace logging."""
 import pytest
-from chaosbench.experiments.trace import TraceLogger, Turn, TaskTrace
-from chaosbench.agents.metacognitive_types import AgentAction, Feedback
+from chaosbench.legacy_v0.experiments.trace import TraceLogger, Turn, TaskTrace
+from chaosbench.legacy_v0.agents.metacognitive_types import AgentAction, Feedback
 
 
 class TestTraceLogger:

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 import time
 
-from chaosbench.agents.metacognitive_types import AgentAction, Feedback, BacktestFeedback
+from chaosbench.legacy_v0.agents.metacognitive_types import AgentAction, Feedback, BacktestFeedback
 
 
 @dataclass

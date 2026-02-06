@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|Bash|Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat task_plan.md 2>/dev/null | head -30 || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[planning-with-files] File changed. If this completes a task, update task_plan.md checkboxes now.'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f task_plan.md ]; then TOTAL=$(grep -c '\\- \\[' task_plan.md 2>/dev/null || echo 0); DONE=$(grep -c '\\- \\[x\\]' task_plan.md 2>/dev/null || echo 0); echo \"[planning-with-files] Progress: $DONE/$TOTAL tasks complete.\"; if [ \"$TOTAL\" != \"0\" ] && [ \"$TOTAL\" != \"$DONE\" ]; then echo 'WARNING: Not all tasks complete. Update task_plan.md before stopping.'; fi; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -4,8 +4,8 @@ import argparse
 from pathlib import Path
 import json
 
-from chaosbench.experiments.session import SessionRunner, SessionConfig
-from chaosbench.agents.metacognitive_agent import MetacognitiveAgent
+from chaosbench.legacy_v0.experiments.session import SessionRunner, SessionConfig
+from chaosbench.legacy_v0.agents.metacognitive_agent import MetacognitiveAgent
 from chaosbench.visualization import plot_phi_curve, plot_session_summary, plot_task
 
 

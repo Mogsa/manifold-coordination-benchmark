@@ -1,7 +1,7 @@
 """Tests for metacognitive agent data types."""
 import pytest
 import numpy as np
-from chaosbench.agents.metacognitive_types import (
+from chaosbench.legacy_v0.agents.metacognitive_types import (
     Feedback,
     AgentObservation,
     AgentAction,

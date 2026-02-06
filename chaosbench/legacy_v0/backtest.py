@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, Any
 import numpy as np
 
-from .models import create_model
+from chaosbench.core.models import create_model
 
 
 @dataclass

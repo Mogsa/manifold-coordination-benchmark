@@ -3,8 +3,8 @@
 from pathlib import Path
 
 from shared.llm_utils import call_llm
-from chaosbench.experiments.session import SessionRunner, SessionConfig
-from chaosbench.agents.metacognitive_types import AgentObservation, AgentAction, parse_action, BacktestFeedback
+from chaosbench.legacy_v0.experiments.session import SessionRunner, SessionConfig
+from chaosbench.legacy_v0.agents.metacognitive_types import AgentObservation, AgentAction, parse_action, BacktestFeedback
 
 
 class HypothesisAgent:
