@@ -55,7 +55,7 @@ All other v2 sections remain the target architecture, but are intentionally defe
    - `CLASSIFY`: exact match → raw score in `{0, 1}`.
    - `IDENTIFY`: exact match → raw score in `{0, 1}`.
    - `PREDICT`: `raw_score = k_eff / K` where `k_eff` is the first-threshold-break horizon.
-   - Weighted score: `weighted_score = raw_score * (1 + h_KS)`.
+   - Weighted score: `weighted_score = raw_score * difficulty` where `difficulty = (1 + h_KS) × (1 + grammar_depth) × (1 + 10σ)` (see §7.2).
    - This keeps `raw_score` in `[0, 1]` for all MVP question types.
 
 6. **Validation (minimal)**
@@ -103,9 +103,11 @@ All other v2 sections remain the target architecture, but are intentionally defe
 
 ## 3. System Grammar
 
-### 3.1 Design Principle: Difficulty Through Chaining
+### 3.1 Design Principle: Difficulty Through Chaining (The IMO Property)
 
-In competition mathematics, a hard problem chains simple theorems. Nobody who only knows one step can solve it. ChaosBench applies the same principle: difficulty emerges from composing simple, well-understood mathematical building blocks via a small set of connectives. Each connective forces a qualitatively different cognitive operation. Chain length × domain diversity = difficulty.
+In the International Mathematical Olympiad, every problem is simple to state — a talented high schooler has all the prerequisite knowledge. The difficulty isn't exotic theorems; it's chaining a few clever tricks in succession, each requiring a different frame of reference. A problem that requires steps A, B, C where each step is easy but the *combination* is hard — that's what separates olympiad problems from textbook exercises.
+
+ChaosBench applies this principle to dynamical systems: difficulty emerges from composing simple, well-understood mathematical building blocks via a small set of connectives. Each connective forces a qualitatively different cognitive operation. The agent knows all the building blocks (the atom registry is public). The search space of possible combinations is vast — too large to brute force. The only practical path to solving problems efficiently is reasoning: recognising patterns, eliminating hypotheses, chaining inferences. Chain length × domain diversity = difficulty.
 
 ### 3.2 Atoms (Building Blocks)
 
@@ -351,21 +353,36 @@ The v1 experiment uses a **fixed problem bank** generated once and frozen before
 
 ### 5.2 v1.5: Self-Evolving Tournament (Separate Experiment)
 
-The self-evolving experiment demonstrates that difficulty escalates adaptively. It uses the round architecture from the original PRD:
+The self-evolving experiment demonstrates that difficulty escalates adaptively. It runs in discrete rounds with time-limited solving.
+
+**Round lifecycle:**
 
 ```
 Round N:
-  PROPOSE → VALIDATE → SOLVE → SCORE → ARCHIVE
+  1. PROPOSE    — Proposer generates problem specs from grammar (family, params, connectives, question type)
+  2. VALIDATE   — Automated gates (Stage 1-2) filter invalid/trivial problems
+  3. SOLVE      — Solvers attempt each problem blind, time-limited
+  4. SCORE      — Verify answers against mathematical ground truth, rank solvers
+  5. EVALUATE   — Was the problem discriminating? (variance in solver scores > threshold)
+  6. ARCHIVE    — Discriminating problems → persistent backlog. Non-discriminating → eliminated.
 ```
 
-This is run separately from the v1 transfer experiment. Its purpose is to show that (a) LLM proposers can generate valid, discriminating problems within the grammar, and (b) problem difficulty escalates as solvers improve. It does NOT produce the Φ(n) transfer comparison — that comes from v1.
+**Problem lifecycle:** Problems are not disposable. Good problems accumulate:
+- **Proposed** → auto-validated → enters the round
+- **Attempted** → if it separates solvers (some succeed, some fail), it's *discriminating*
+- **Discriminating problems → backlog** — a growing, curated set of quality problems
+- **Non-discriminating → eliminated** — too easy (everyone solves) or too hard (nobody solves) or poorly constructed
+- The backlog IS the benchmark — it improves itself over time
 
 **v1.5 configuration:**
-- 1 proposer (Claude Sonnet 4.5)
-- 4 solvers (mix of models)
+- 1 proposer model (temperature 0.9, creative)
+- 3-5 solver models (mix of vendors, temperature 0.5, analytical)
 - 4–6 problems per round
 - 10–20 rounds
-- Proposer scored by discrimination (requires all 4 solver scores)
+- Proposer scored by discrimination (requires all solver scores)
+- Solvers ranked by weighted accuracy across rounds
+
+This is run separately from the v1 transfer experiment. Its purpose is to show that (a) LLM proposers can generate valid, discriminating problems within the grammar, and (b) problem difficulty escalates as solvers improve. It does NOT produce the Φ(n) transfer comparison — that comes from v1.
 
 ---
 
@@ -562,6 +579,43 @@ The agent does NOT see: ground truth answers for the current problem, the true s
 | gemini | Gemini 3 | Cross-vendor |
 
 At minimum: one within-model comparison (sonnet vs sonnet-thinking) and one cross-vendor comparison. Adjust based on availability and cost.
+
+### 8.4 v2: Tool-Augmented Mode
+
+**Design principle: educated guesses, not random guesses.** In raw mode (§8.1), agents must do all computation in their heads. Phase 3 showed this leads to failures that are about arithmetic, not reasoning — Gemini *knows* it should compute a Lyapunov exponent but can't execute the math. Tool-augmented mode separates the reasoning from the computation.
+
+**The IMO analogy:** In the International Mathematical Olympiad, problems are simple to state. The difficulty isn't exotic knowledge — a talented high schooler has all the tools. The difficulty is *chaining a few clever tricks in succession, with the right frame of reference.* ChaosBench follows this principle: the agent has all the computational tools it needs. The only thing it has to supply is reasoning about which tools to use, in what order, and how to interpret the results.
+
+**What the agent knows:**
+- The full atom registry (families, parameter ranges, functional forms)
+- That the problem was constructed by combining building blocks from this registry
+- That it may involve connectives (affine conjugacy, skew product, etc.)
+- The search space is combinatorially large — brute force is impractical
+
+**What the agent does NOT know:**
+- Which atoms were used
+- What parameters were chosen
+- Which connectives were applied
+- The ground truth answer
+
+**Minimal tool set:**
+
+| Tool | Input | Output | Purpose |
+|------|-------|--------|---------|
+| `COMPUTE_STATS` | time series | mean, variance, ACF(1..5), PE, min, max, attractor diameter | Basic statistical characterisation |
+| `ITERATE` | function + x0 + n | trajectory of n values | Run any atom/composition forward |
+| `LYAPUNOV_ESTIMATE` | time series | estimated λ_max ± uncertainty | Numerical Lyapunov from data |
+| `RETURN_MAP` | time series | (x_n, x_{n+1}) pairs + fitted polynomial degree | Visualise/characterise the dynamics |
+| `COMPARE` | two time series | correlation, KS-test p-value, ACF distance | Compare data vs candidate system |
+
+**Design constraints on tools:**
+- Each tool performs one well-defined computation — no reasoning, no interpretation
+- Tools return raw numbers — the agent must interpret them
+- No tool solves the problem directly (e.g., no `IDENTIFY_SYSTEM` tool)
+- Tools are the same for all agents — differentiation comes from reasoning strategy
+- Tool calls are logged and counted — efficiency is a secondary metric
+
+**Why this enables the IMO property:** The search space of `N_atoms × N_param_values × N_connectives × N_depths` is enormous. A brute-force agent trying every combination with `ITERATE` + `COMPARE` would take thousands of calls. An agent that reasons ("the return map looks piecewise linear, so it's probably tent or damped_linear; the Lyapunov is positive, so tent; let me estimate μ from the slope") solves it in 3-4 calls. *The tool set makes brute force possible but impractical — only reasoning makes it efficient.*
 
 ---
 
@@ -906,19 +960,28 @@ The three-stage validation ensures every problem is neither trivially solvable n
 - Switching connective (piecewise systems)
 - CHARACTERIZE, BIFURCATE, SEGMENT question types
 
-### v2 (Full grammar)
+### v2 (Full grammar + tool-augmented + committee)
 
 - Symmetric coupling, linear filter, nonlinear conjugacy connectives
 - 3+ layer reasoning chains
-- Tool-augmented mode (ANALYZE, HYPOTHESIZE, FIT tools)
+- **Tool-augmented solving mode** (see §8.4): COMPUTE_STATS, ITERATE, LYAPUNOV_ESTIMATE, RETURN_MAP, COMPARE
 - DESIGN, CONJUGATE, CONTROL question types
-- Multi-agent collaboration with shared knowledge base
 - Grammar-aware DSL output mode
 
-### v3 (Meta-benchmark)
+- **Committee review for problem validation:** Before a proposed problem enters the round, a panel of reviewer agents (3-5 models) votes on whether it is genuinely difficult, well-formed, and non-trivial. Majority vote required for acceptance. This adds qualitative judgment to the automated Stage 1-2 gates — catching problems that pass validation but are uninteresting, or that exploit edge cases in the automated checks. The committee is the "Stage 3" validation described in §6.4, now mandatory rather than borderline-only.
 
-- Full adversarial tournament (every agent proposes and solves)
-- Self-evolving grammar (new atom families added as agents master existing ones)
+- **Problem backlog as persistent benchmark:** The growing set of discriminating problems becomes the benchmark itself. New models can be evaluated against the frozen backlog without running the tournament. The backlog is versioned — "ChaosBench v2.1" = backlog snapshot at round 20, "v2.2" = snapshot at round 50, etc.
+
+### v3 (Open platform)
+
+- **Full adversarial tournament**: Every agent both proposes and solves — no fixed proposer/solver split
+- **Self-evolving grammar**: New atom families added as agents master existing ones (automatic difficulty escalation)
+- **Web platform**: A lightweight website where:
+  - Anyone can take a problem + prompt, paste it into ChatGPT/Claude/any web UI (no API cost required)
+  - Submit their answer back to the platform
+  - API endpoint for automated agent submission
+  - Leaderboard with ranking by weighted accuracy
+- **Scale to 100+ LLMs**: Including duplicates (same model, different prompting strategies), open-source models, fine-tuned variants. The large participant pool makes discrimination scoring statistically robust and reveals whether model diversity matters.
 - Cross-benchmark correlation study (ChaosBench vs MATH vs ARC vs GPQA)
 
 ---
@@ -1028,10 +1091,11 @@ Regimes: r < 3: fixed point. r ∈ [3, 3.57): period doubling. r > 3.57: mostly 
 ```
 x_{n+1} = μ · min(x_n, 1 - x_n)
 Domain: [0, 1]
-Parameters: μ ∈ [1.0, 2.0]
+Parameters: μ ∈ [1.0, 1.95]
 Derivative: f'(x) = μ if x < 0.5, -μ if x > 0.5
 Lyapunov: λ = ln(μ)  (exact, parameter-only)
 Regimes: μ < 1: convergent. μ = 1: marginal. μ > 1: chaotic (no periodic windows for μ > 1).
+Note: μ = 2.0 excluded — causes floating-point degeneration (0.5 → 1.0 → 0.0 → stuck).
 ```
 
 ### A.3 Sine Map
