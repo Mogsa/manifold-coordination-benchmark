@@ -984,6 +984,10 @@ The three-stage validation ensures every problem is neither trivially solvable n
 - **Scale to 100+ LLMs**: Including duplicates (same model, different prompting strategies), open-source models, fine-tuned variants. The large participant pool makes discrimination scoring statistically robust and reveals whether model diversity matters.
 - Cross-benchmark correlation study (ChaosBench vs MATH vs ARC vs GPQA)
 
+### NeurIPS Vision (Evolved Scope)
+
+For the full evolved research vision — compositionality gap as primary metric, continuous dynamical systems, active querying, web platform — see `docs/plans/chaosbench-neurips-vision.md`. That document captures aspirational ideas beyond the current MVP scope defined in §1.1.
+
 ---
 
 ## 15. Success Criteria

@@ -63,6 +63,7 @@
 - [ ] Add tool-augmented solver mode (§8.4 in PRD)
 - [ ] Add persistent problem backlog and archive policy in arena
 - [ ] Add SQLite-backed experiment storage and reproducibility logging
+- [ ] Review and refine NeurIPS vision document after Phase 5 results
 
 ---
 
