@@ -106,8 +106,8 @@
 
 | DECISION_ID | Choice | Outcome | Evidence |
 |---|---|---|---|
-| DC-OK-001 | Non-textbook parameters to reduce memorization | Effective; generated meaningful variation while staying valid | `docs/plans/chaosbench-v4-findings.md` |
-| DC-OK-002 | k_eff-style prediction scoring | Prevented mean-reversion gaming; cleaner than MSE/NLL in this setup | `docs/plans/chaosbench-v4-findings.md` |
+| DC-OK-001 | Non-textbook parameters to reduce memorization | Effective; generated meaningful variation while staying valid | `docs/research/chaosbench-v4-findings.md` |
+| DC-OK-002 | k_eff-style prediction scoring | Prevented mean-reversion gaming; cleaner than MSE/NLL in this setup | `docs/research/chaosbench-v4-findings.md` |
 | DC-OK-003 | Fail-safe parser strategy (“never crash”) | Improved robustness in both agent and arena loops | `chaosbench/agents/parsing.py`, `chaosbench/arena/parsing.py` |
 | DC-OK-004 | Separate arena from static benchmark track | Preserved ability to answer two different research questions | `docs/Chaos_IMO` §5.1 vs §5.2 |
 

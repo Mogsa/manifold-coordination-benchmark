@@ -986,7 +986,7 @@ The three-stage validation ensures every problem is neither trivially solvable n
 
 ### NeurIPS Vision (Evolved Scope)
 
-For the full evolved research vision — compositionality gap as primary metric, continuous dynamical systems, active querying, web platform — see `docs/plans/chaosbench-neurips-vision.md`. That document captures aspirational ideas beyond the current MVP scope defined in §1.1.
+For the full evolved research vision — compositionality gap as primary metric, continuous dynamical systems, active querying, web platform — see `docs/research/chaosbench-neurips-vision.md`. That document captures aspirational ideas beyond the current MVP scope defined in §1.1.
 
 ---
 
