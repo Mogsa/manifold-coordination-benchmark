@@ -17,6 +17,7 @@ from typing import Optional
 
 import numpy as np
 
+from chaosbench.grammar.connectives import AffineConjugacy
 from chaosbench.grammar.registry import create_atom
 from chaosbench.grammar.system import DynamicalSystem, SystemMetadata, Observation
 from chaosbench.scoring.difficulty import composite_difficulty
@@ -92,6 +93,7 @@ def create_problem(
     noise_std: float = 0.01,
     stride: int = 1,
     burn_in: int = 500,
+    conjugacy: Optional[dict] = None,
 ) -> Problem:
     """Create a single benchmark problem.
 
@@ -105,12 +107,18 @@ def create_problem(
         noise_std: Gaussian noise standard deviation.
         stride: Keep every stride-th iterate when recording observations.
         burn_in: Number of pre-recording iterations to reach attractor.
+        conjugacy: Optional dict {"a": float, "b": float} for affine conjugacy.
+            When present, wraps the atom in AffineConjugacy (grammar_depth=1).
 
     Returns:
         A Problem ready for validation and presentation.
     """
     atom = create_atom(family, params)
-    system = DynamicalSystem(atom)
+    grammar_depth = 0
+    if conjugacy is not None:
+        atom = AffineConjugacy(atom, a=conjugacy["a"], b=conjugacy["b"])
+        grammar_depth = 1
+    system = DynamicalSystem(atom, grammar_depth=grammar_depth)
     obs = system.observe(
         n_points=n_points,
         noise_std=noise_std,
@@ -120,7 +128,7 @@ def create_problem(
         burn_in=burn_in,
     )
     meta = system.metadata()
-    diff = composite_difficulty(meta.h_ks, grammar_depth=0, noise_std=noise_std)
+    diff = composite_difficulty(meta.h_ks, grammar_depth=grammar_depth, noise_std=noise_std)
     problem_id = _make_problem_id(
         family=family,
         params=params,

@@ -11,7 +11,8 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 
-from chaosbench.grammar.registry import ATOM_REGISTRY, MINI_BANK_PARAMS, create_atom
+from chaosbench.grammar.connectives import AffineConjugacy
+from chaosbench.grammar.registry import ATOM_REGISTRY, CONJ_BANK_PARAMS, MINI_BANK_PARAMS, create_atom
 from chaosbench.problems.factory import (
     Problem,
     QuestionType,
@@ -81,6 +82,9 @@ def _stage1_trajectory(problem: Problem) -> np.ndarray:
         return base
 
     atom = create_atom(problem.system_metadata.family, problem.system_metadata.params)
+    # For conjugated problems, wrap in AffineConjugacy so trajectory matches domain
+    if problem.system_metadata.grammar_depth > 0:
+        atom = AffineConjugacy(atom, a=CONJ_BANK_PARAMS["a"], b=CONJ_BANK_PARAMS["b"])
     start = float(base[0]) if len(base) > 0 else float(obs.x0)
     return atom.trajectory(start, required_n)
 
@@ -91,10 +95,17 @@ def generate_mini_bank(
     n_points: int = 200,
     noise_std: float = 0.01,
     question_types: Optional[Iterable[QuestionType]] = None,
+    include_conjugated: bool = True,
 ) -> List[Problem]:
-    """Generate a mini-bank over selected question types."""
+    """Generate a mini-bank over selected question types.
+
+    Generates depth-0 problems from MINI_BANK_PARAMS, then optionally
+    depth-1 conjugated problems from each family's hardest param set.
+    """
     selected_types = _normalize_question_types(question_types)
     problems = []
+
+    # Depth-0: bare atoms
     for family, param_list in MINI_BANK_PARAMS.items():
         for params in param_list:
             for qt in selected_types:
@@ -108,6 +119,24 @@ def generate_mini_bank(
                     noise_std=noise_std,
                 )
                 problems.append(p)
+
+    # Depth-1: conjugated (last param set per family)
+    if include_conjugated:
+        for family, param_list in MINI_BANK_PARAMS.items():
+            hardest_params = param_list[-1]
+            for qt in selected_types:
+                p = create_problem(
+                    family=family,
+                    params=hardest_params,
+                    question_type=qt,
+                    ic_seed=ic_seed,
+                    noise_seed=noise_seed,
+                    n_points=n_points,
+                    noise_std=noise_std,
+                    conjugacy=CONJ_BANK_PARAMS,
+                )
+                problems.append(p)
+
     return problems
 
 
@@ -325,16 +354,25 @@ def _serialize_stage2(s2: Optional[dict]) -> Optional[dict]:
     for k, v in s2.items():
         if isinstance(v, dict):
             out[k] = {
-                kk: float(vv) if isinstance(vv, (np.floating, float)) else vv
+                kk: _serialize_value(vv)
                 for kk, vv in v.items()
             }
-        elif isinstance(v, np.ndarray):
-            out[k] = v.tolist()
-        elif isinstance(v, (np.floating, np.integer)):
-            out[k] = float(v)
         else:
-            out[k] = v
+            out[k] = _serialize_value(v)
     return out
+
+
+def _serialize_value(v):
+    """Convert a single value to JSON-serializable form."""
+    if isinstance(v, np.ndarray):
+        return v.tolist()
+    if isinstance(v, np.bool_):
+        return bool(v)
+    if isinstance(v, (np.floating, float)):
+        return float(v)
+    if isinstance(v, np.integer):
+        return int(v)
+    return v
 
 
 def load_bank(path: str) -> dict:

@@ -10,7 +10,7 @@ from chaosbench.agents.protocol import TaskResult
 from chaosbench.problems.factory import Problem
 
 # MVP families and regimes (only those in the mini-bank)
-MVP_FAMILIES = ["logistic", "tent", "damped_linear", "rotation"]
+MVP_FAMILIES = ["logistic", "tent", "damped_linear", "rotation", "sine", "circle", "henon"]
 MVP_REGIMES = ["chaotic", "periodic", "quasiperiodic", "fixed_point"]
 
 

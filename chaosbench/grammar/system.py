@@ -98,6 +98,9 @@ class DynamicalSystem:
         lo, hi = self._atom.domain
         x0 = lo + rng_ic.random() * (hi - lo)
 
+        # Reset internal state (needed for HenonAtom's hidden y-component)
+        self._atom.prepare(x0)
+
         # Burn-in
         x = x0
         for _ in range(burn_in):

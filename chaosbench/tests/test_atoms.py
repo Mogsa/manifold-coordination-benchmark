@@ -5,9 +5,12 @@ import pytest
 
 from chaosbench.grammar.atoms import (
     Atom,
+    CircleAtom,
     DampedLinearAtom,
+    HenonAtom,
     LogisticAtom,
     RotationAtom,
+    SineAtom,
     TentAtom,
 )
 
@@ -194,6 +197,170 @@ class TestRotationAtom:
             RotationAtom(omega=1.0)
 
 
+# ── SineAtom ─────────────────────────────────────────────────────────────
+
+class TestSineAtom:
+    def test_iterate(self):
+        atom = SineAtom(a=1.0)
+        # sin(π·0.5) = 1.0, so f(0.5) = 1.0·1.0 = 1.0
+        assert atom.iterate(0.5) == pytest.approx(1.0)
+        # sin(π·0) = 0, so f(0) = 0
+        assert atom.iterate(0.0) == pytest.approx(0.0)
+
+    def test_derivative(self):
+        atom = SineAtom(a=1.0)
+        # d/dx[a·sin(πx)] = a·π·cos(πx)
+        # At x=0: π·cos(0) = π
+        assert atom.derivative(0.0) == pytest.approx(np.pi)
+        # At x=0.5: π·cos(π/2) = 0
+        assert atom.derivative(0.5) == pytest.approx(0.0, abs=1e-10)
+
+    def test_domain(self):
+        atom = SineAtom(a=0.8)
+        assert atom.domain == (0.0, 1.0)
+
+    def test_family(self):
+        atom = SineAtom(a=0.8)
+        assert atom.family == "sine"
+
+    def test_params(self):
+        atom = SineAtom(a=0.8)
+        assert atom.params == {"a": 0.8}
+
+    def test_regime_chaotic(self):
+        atom = SineAtom(a=0.97)
+        assert atom.regime() == "chaotic"
+
+    def test_regime_periodic_or_fixed(self):
+        atom = SineAtom(a=0.65)
+        regime = atom.regime()
+        assert regime in ("periodic", "fixed_point")
+
+    def test_param_validation(self):
+        with pytest.raises(ValueError):
+            SineAtom(a=0.3)
+        with pytest.raises(ValueError):
+            SineAtom(a=1.1)
+
+    def test_trajectory_shape(self):
+        atom = SineAtom(a=0.8)
+        traj = atom.trajectory(0.5, 100)
+        assert traj.shape == (100,)
+        assert traj[0] == 0.5
+
+
+# ── CircleAtom ───────────────────────────────────────────────────────────
+
+class TestCircleAtom:
+    def test_iterate_K0(self):
+        """With K=0, circle map reduces to rotation."""
+        atom = CircleAtom(K=0.0, omega=0.25)
+        assert atom.iterate(0.0) == pytest.approx(0.25)
+        assert atom.iterate(0.9) == pytest.approx(0.15)
+
+    def test_derivative(self):
+        atom = CircleAtom(K=0.5, omega=0.3)
+        # d/dx = 1 - K·cos(2πx); at x=0: 1 - 0.5·1 = 0.5
+        assert atom.derivative(0.0) == pytest.approx(0.5)
+
+    def test_domain(self):
+        atom = CircleAtom(K=0.5, omega=0.3)
+        assert atom.domain == (0.0, 1.0)
+
+    def test_family(self):
+        atom = CircleAtom(K=0.5, omega=0.3)
+        assert atom.family == "circle"
+
+    def test_params(self):
+        atom = CircleAtom(K=0.5, omega=0.3)
+        assert atom.params == {"K": 0.5, "omega": 0.3}
+
+    def test_regime_quasiperiodic(self):
+        atom = CircleAtom(K=0.5, omega=0.382)
+        assert atom.regime() == "quasiperiodic"
+
+    def test_regime_chaotic(self):
+        atom = CircleAtom(K=1.15, omega=0.618)
+        lam = atom.lyapunov()
+        # K > 1 should give positive Lyapunov (chaotic)
+        assert lam > 0.0
+        assert atom.regime() == "chaotic"
+
+    def test_param_validation(self):
+        with pytest.raises(ValueError):
+            CircleAtom(K=-0.1, omega=0.3)
+        with pytest.raises(ValueError):
+            CircleAtom(K=0.5, omega=0.0)
+        with pytest.raises(ValueError):
+            CircleAtom(K=0.5, omega=1.0)
+
+    def test_trajectory_in_domain(self):
+        atom = CircleAtom(K=0.5, omega=0.382)
+        traj = atom.trajectory(0.3, 200)
+        assert np.all(traj >= 0.0)
+        assert np.all(traj < 1.0)
+
+
+# ── HenonAtom ────────────────────────────────────────────────────────────
+
+class TestHenonAtom:
+    def test_iterate(self):
+        atom = HenonAtom(a=1.4, b=0.3)
+        atom.prepare(0.0)
+        # x' = 1 - 1.4·0² + 0 = 1.0, y' = 0.3·0 = 0
+        assert atom.iterate(0.0) == pytest.approx(1.0)
+
+    def test_prepare_resets_y(self):
+        atom = HenonAtom(a=1.4, b=0.3)
+        atom.prepare(0.5)
+        assert atom._y == 0.0
+
+    def test_domain(self):
+        atom = HenonAtom(a=1.3, b=0.3)
+        assert atom.domain == (-1.5, 1.5)
+
+    def test_family(self):
+        atom = HenonAtom(a=1.3, b=0.3)
+        assert atom.family == "henon"
+
+    def test_params(self):
+        atom = HenonAtom(a=1.3, b=0.3)
+        assert atom.params == {"a": 1.3, "b": 0.3}
+
+    def test_lyapunov_classic(self):
+        """Classic Hénon (a=1.4, b=0.3): λ1 ≈ 0.42."""
+        atom = HenonAtom(a=1.4, b=0.3)
+        lam = atom.lyapunov()
+        assert lam == pytest.approx(0.42, abs=0.05)
+
+    def test_regime_chaotic(self):
+        atom = HenonAtom(a=1.35, b=0.30)
+        assert atom.regime() == "chaotic"
+
+    def test_regime_periodic(self):
+        atom = HenonAtom(a=1.07, b=0.28)
+        assert atom.regime() == "periodic"
+
+    def test_param_validation(self):
+        with pytest.raises(ValueError):
+            HenonAtom(a=0.5, b=0.3)
+        with pytest.raises(ValueError):
+            HenonAtom(a=1.3, b=0.1)
+
+    def test_trajectory_shape(self):
+        atom = HenonAtom(a=1.3, b=0.3)
+        traj = atom.trajectory(0.0, 100)
+        assert traj.shape == (100,)
+        assert traj[0] == 0.0
+
+    def test_trajectory_bounded(self):
+        """Chaotic Hénon should stay bounded."""
+        atom = HenonAtom(a=1.35, b=0.30)
+        traj = atom.trajectory(0.0, 1000)
+        assert np.all(np.isfinite(traj))
+        assert np.all(np.abs(traj) < 2.0)
+
+
 # ── Cross-cutting ─────────────────────────────────────────────────────────
 
 class TestAtomBase:
@@ -211,6 +378,14 @@ class TestAtomBase:
             TentAtom(mu=1.5),
             DampedLinearAtom(lam=0.5),
             RotationAtom(omega=0.25),
+            SineAtom(a=0.8),
+            CircleAtom(K=0.5, omega=0.3),
+            HenonAtom(a=1.3, b=0.3),
         ]
         for a in atoms:
             assert isinstance(a, Atom)
+
+    def test_prepare_noop_for_1d(self):
+        """prepare() should be a no-op for standard 1D atoms."""
+        atom = LogisticAtom(r=3.5)
+        atom.prepare(0.5)  # Should not raise

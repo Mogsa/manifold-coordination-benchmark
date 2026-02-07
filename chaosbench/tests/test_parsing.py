@@ -79,7 +79,7 @@ class TestParseIdentify:
         assert parse_identify("") == ""
 
     def test_no_match(self):
-        assert parse_identify("Sine wave maybe?") == ""
+        assert parse_identify("Something completely unrelated.") == ""
 
 
 # --- PREDICT ---

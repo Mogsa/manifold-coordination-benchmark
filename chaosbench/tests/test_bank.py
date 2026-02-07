@@ -21,14 +21,17 @@ from chaosbench.problems.factory import QuestionType
 
 class TestGenerateMiniBank:
     def test_count(self):
-        """4 families × 3 params × 3 question types = 36 problems."""
+        """7 families × 3 params × 3 types = 63 depth-0 + 7 × 3 depth-1 = 84."""
         bank = generate_mini_bank()
-        assert len(bank) == 36
+        assert len(bank) == 84
 
     def test_all_families_present(self):
         bank = generate_mini_bank()
         families = {p.system_metadata.family for p in bank}
-        assert families == {"logistic", "tent", "damped_linear", "rotation"}
+        assert families == {
+            "logistic", "tent", "damped_linear", "rotation",
+            "sine", "circle", "henon",
+        }
 
     def test_all_question_types_present(self):
         bank = generate_mini_bank()
@@ -37,7 +40,7 @@ class TestGenerateMiniBank:
 
     def test_predict_only_slice(self):
         bank = generate_mini_bank(question_types=[QuestionType.PREDICT])
-        assert len(bank) == 12  # 4 families × 3 params × 1 type
+        assert len(bank) == 28  # 7 families × 3 params + 7 conjugated = 28
         assert {p.question_type for p in bank} == {QuestionType.PREDICT}
 
     def test_no_textbook_params(self):
@@ -93,7 +96,7 @@ class TestTrackBanks:
             noisy_noise_stds=[0.01, 0.02],
         )
         assert set(tracks.keys()) == {"clean", "noisy_sigma_0p010", "noisy_sigma_0p020"}
-        assert len(tracks["clean"]) == 12
+        assert len(tracks["clean"]) == 28  # 7 families × 3 params + 7 conjugated
         assert all(p.metadata["observation_mode"] == "clean" for p in tracks["clean"])
         assert all(p.metadata["noise_std"] == 0.0 for p in tracks["clean"])
         assert all(

@@ -423,3 +423,57 @@ python -m chaosbench.experiment.runner
 - 27 problems in the bank ready for Gemini
 
 *Updated: 2026-02-06 (Phase 3 complete, ready for live Gemini run)*
+
+---
+
+## Expanded Atoms + Affine Conjugacy (2026-02-07)
+
+### Why This Matters
+
+The original 4-family benchmark was *too easy to game*. With only 4 families, IDENTIFY was a 25%-random task where Gemini hit 55% — barely meaningful. And every family had a recognizable "home domain" (logistic → [0,1], damped_linear → [-10,10]), so the agent could pattern-match without understanding dynamics.
+
+Three changes fix this:
+
+### 1. Three New Atom Families (4 → 7)
+
+| Family | Math | Why It's Interesting |
+|--------|------|---------------------|
+| **SineAtom** | `x' = a·sin(πx)` | Unimodal like logistic — a *confuser*. Forces IDENTIFY to distinguish similar-looking families on subtle differences. |
+| **CircleAtom** | `x' = (x + Ω − K/(2π)·sin(2πx)) mod 1` | Two parameters, three regimes (quasiperiodic, mode-locked, chaotic). First atom where the *same family* can appear as any regime. |
+| **HenonAtom** | `(x', y') = (1−ax²+y, bx)` | First 2D system. Agent sees 1D projection (x only), but the underlying 2D dynamics create qualitatively different trajectories. Hidden `_y` state managed via `prepare()` method. |
+
+**Key design challenge:** HenonAtom needed a `prepare(x0)` method on the Atom base class to reset its internal y-component before trajectory generation. Added as a no-op on the base class — clean extension point without breaking existing atoms.
+
+**Parameter selection:** Henon params `{a=1.38, b=0.34}` escaped to infinity — the bounded attractor doesn't exist for all (a,b) pairs. Tested empirically, settled on `{a=1.35, b=0.30}` for the strongly chaotic case (λ≈0.36, bounded).
+
+### 2. Affine Conjugacy (Depth-1 Connective)
+
+The single biggest difficulty amplifier. Transforms any atom `f` via `y = a·f((y-b)/a) + b`. This preserves *all dynamics* (Lyapunov, h_KS, regime) but shifts the domain to unfamiliar ranges. A logistic map that normally lives in [0,1] now produces data in [0.5, 2.2]. The agent can't just pattern-match on domain — it must understand structure.
+
+**Implementation insight:** AffineConjugacy subclasses Atom itself. The derivative chain rule simplifies beautifully: `dy'/dy = f'((y-b)/a)` — the scale factors cancel. This means Lyapunov exponent computation works automatically.
+
+The agent receives **NO hint** that conjugacy was applied. It just sees weird-domain data and must reason about why.
+
+### 3. Expanded Bank (27 → 84 raw problems)
+
+- **Depth-0:** 7 families × 3 params × 3 types = 63
+- **Depth-1:** 7 families × 1 hardest param × 3 types = 21 (conjugated with a=1.7, b=0.5)
+- **Total:** 84 raw, expect 55-70 validated
+
+The `_serialize_stage2` function needed a fix — numpy `bool_` values weren't JSON-serializable. Added a `_serialize_value` helper.
+
+### Numbers
+
+- 316 tests passing (up from 256)
+- 68 atom tests (up from 38)
+- 17 new connective tests
+- Bank test expectations updated: 84 raw problems, 7 families
+
+### What to Predict
+
+Before running Gemini on the expanded bank, here's what the theory says should happen:
+- **IDENTIFY should drop** (55% → <40%): More families, confusable pairs (sine/logistic), conjugacy removes domain cues
+- **PREDICT should drop** (79% → <65%): Henon is fundamentally harder (fractal attractor), conjugacy changes scale
+- **CLASSIFY should hold or improve** (36% → ~30-40%): More regime diversity helps calibrate, but circle map adds regime ambiguity
+
+*Updated: 2026-02-07 (expanded atoms + conjugacy, 316 tests green)*

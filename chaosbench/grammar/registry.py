@@ -10,9 +10,12 @@ from typing import Dict, List, Tuple, Type
 
 from chaosbench.grammar.atoms import (
     Atom,
+    CircleAtom,
     DampedLinearAtom,
+    HenonAtom,
     LogisticAtom,
     RotationAtom,
+    SineAtom,
     TentAtom,
 )
 
@@ -46,6 +49,21 @@ ATOM_REGISTRY: Dict[str, AtomSpec] = {
         cls=RotationAtom,
         param_names=("omega",),
         param_ranges={"omega": (0.0, 1.0)},
+    ),
+    "sine": AtomSpec(
+        cls=SineAtom,
+        param_names=("a",),
+        param_ranges={"a": (0.5, 1.0)},
+    ),
+    "circle": AtomSpec(
+        cls=CircleAtom,
+        param_names=("K", "omega"),
+        param_ranges={"K": (0.0, 2.0), "omega": (0.0, 1.0)},
+    ),
+    "henon": AtomSpec(
+        cls=HenonAtom,
+        param_names=("a", "b"),
+        param_ranges={"a": (1.0, 1.4), "b": (0.2, 0.4)},
     ),
 }
 
@@ -88,4 +106,27 @@ MINI_BANK_PARAMS = {
         {"omega": 0.381966011},  # quasiperiodic (golden-ratio related)
         {"omega": 0.723},        # quasiperiodic
     ],
+    "sine": [
+        {"a": 0.65},  # periodic (below chaos onset)
+        {"a": 0.84},  # near chaos onset
+        {"a": 0.97},  # chaotic
+    ],
+    "circle": [
+        {"K": 0.5, "omega": 0.382},   # quasiperiodic (K<1, irrational Ω)
+        {"K": 0.9, "omega": 0.3},     # mode-locked periodic (Arnold tongue)
+        {"K": 1.15, "omega": 0.618},  # chaotic (K>1)
+    ],
+    "henon": [
+        {"a": 1.07, "b": 0.28},  # periodic
+        {"a": 1.25, "b": 0.31},  # chaotic (λ≈0.27)
+        {"a": 1.35, "b": 0.30},  # strongly chaotic (λ≈0.36)
+    ],
+}
+
+
+# Conjugacy params: applied to each family's hardest param set (last entry).
+# a=1.7, b=0.5 shifts domain so agent can't pattern-match on home domain.
+CONJ_BANK_PARAMS = {
+    "a": 1.7,
+    "b": 0.5,
 }
